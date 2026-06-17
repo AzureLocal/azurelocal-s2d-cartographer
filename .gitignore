@@ -38,8 +38,9 @@ Desktop.ini
 .vscode/launch.json
 .vscode/tasks.json
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings (logs and machine-local overrides only — agents/hooks/settings are committed)
+.claude/logs/
+.claude/settings.local.json
 
 # Sample generated report outputs (large binary files)
 samples/*.xlsx

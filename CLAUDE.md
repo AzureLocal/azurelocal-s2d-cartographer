@@ -2,7 +2,7 @@
 
 ## What this repo is
 
-Storage Spaces Direct is one of the most misunderstood technologies in the Azure Local ecosystem:
+S2D Cartographer is a PowerShell module that audits and reports on Storage Spaces Direct (S2D) clusters in Azure Local environments. It collects cluster state, disk topology, fault domain layout, and capacity data, then renders structured HTML, Word, and Excel reports. It is not a remediation tool — it reads and reports only, never writes to cluster state.
 
 ---
 
@@ -40,7 +40,7 @@ Key rules:
 
 | Fact | Value |
 |---|---|
-| Primary language | Markdown / Python (MkDocs) |
+| Primary language | PowerShell 7 |
 | GitHub org | AzureLocal |
 | Azure login | kris@hybridsolutions.cloud |
 | Key Vault | kv-hcs-vault-01 |
@@ -53,7 +53,7 @@ Key rules:
 | `AZURE_DEVOPS_EXT_PAT` | kv-hcs-vault-01 via Load-HCSEnvironment.ps1 | ADO CLI (`az boards`, `az devops`) |
 Load before starting a session:
 ```powershell
-. E:\git\platform\scripts\Load-HCSEnvironment.ps1
+. D:\git\platform\scripts\Load-HCSEnvironment.ps1
 ```
 
 ### Build and test commands
@@ -139,9 +139,11 @@ azurelocal-s2d-cartographer/
 
 ## Subagents available in this repo
 
-- `azurelocal-s2d-cartographer-engineer` (model: sonnet) — Expert in `azurelocal-s2d-cartographer`: deep knowledge of this repo's structure, conventions, and development workflow.
+- `azurelocal-s2d-cartographer-engineer` (model: sonnet) — PowerShell module engineer for S2D Cartographer: collector design, report rendering, Pester tests, PSGallery publishing.
 
-User-level agents (available in every repo session): `triage-lookup`, `markdown-prose-editor`, `azurelocal-domain-expert`, `mkdocs-material-doctor`, `turner-module-scaffold-engineer`, `mms-2026-demo-presenter`.
+User-level agents (every repo): `triage-lookup`, `markdown-prose-editor`, `azurelocal-domain-expert`, `mkdocs-material-doctor`, `turner-module-scaffold-engineer`, `mms-2026-demo-presenter`.
+
+Platform repo agents (when working in `D:\git\platform`): `orchestration-pm`, `security-waf-caf`, `terraform-validator`, `bicep-validator`, `arm-validator`, `ansible-linter`, `powershell-linter`, `reviewer`, `security-reviewer`, `documenter`, `coder`, `planner`, `operator`, `investigator`, `test-writer`, `router`.
 
 ---
 
@@ -152,3 +154,15 @@ kris@hybridsolutions.cloud
 Senior Product Technology Architect, TierPoint | Microsoft MVP (Azure) | MCT
 Owner, Hybrid Cloud Solutions LLC — hybridsolutions.cloud
 Country Cloud Boy — thisismydemo.cloud
+
+---
+
+## HCS Orchestration Profile
+
+**Validation profile:** iac-powershell — see `D:\git\platform\profiles\iac-powershell.yaml`
+
+This repo is a **pilot** for the `iac-powershell` type in the HCS multi-agent orchestration system.
+Run `/dispatch iac-powershell` (or `/dispatch` for all pilots) to validate this repo.
+
+**Repo-specific notes for validators:**
+PSScriptAnalyzer `-Severity Warning,Error` must pass. All `.ps1` files require `#Requires -Version 7.0`, `Set-StrictMode -Version Latest`, `$ErrorActionPreference = 'Stop'`. Pester tests in `tests/`. Module public/private structure in `Modules/Public/` and `Modules/Private/`.
