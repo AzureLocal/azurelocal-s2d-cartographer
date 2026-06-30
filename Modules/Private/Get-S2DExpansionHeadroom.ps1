@@ -67,8 +67,12 @@ function Get-S2DExpansionHeadroom {
     # Thin provisioning presence flag — used by report renderers for Part A:
     # the 70% amber warning is only shown when thin volumes are present.
     # When all volumes are fixed, 70% is rendered as advisory/neutral.
-    # Null-safe: -eq against $null returns $false, so missing ProvisioningType defaults to non-thin.
-    $hasThinVolumes = [bool]($workloadVols | Where-Object { $_.ProvisioningType -eq 'Thin' })
+    # StrictMode-safe: use PSObject.Properties to check for ProvisioningType before comparing;
+    # PSCustomObject fixtures in tests may not carry this property — default to non-thin when absent.
+    $hasThinVolumes = [bool]($workloadVols | Where-Object {
+        $prop = $_.PSObject.Properties['ProvisioningType']
+        $null -ne $prop -and $prop.Value -eq 'Thin'
+    })
 
     # U = sum of footprint bytes for non-infra volumes
     $usedBytes = [int64](

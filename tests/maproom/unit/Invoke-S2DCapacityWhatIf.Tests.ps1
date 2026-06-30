@@ -264,7 +264,7 @@ Describe 'Invoke-S2DCapacityWhatIf' {
                 $outDir = Join-Path $td 'whatif-out'
                 Invoke-S2DCapacityWhatIf -BaselineSnapshot $snap `
                     -AddNodes 1 -OutputDirectory $outDir -Format Html
-                $htmlFiles = Get-ChildItem $outDir -Filter '*.html' -ErrorAction SilentlyContinue
+                $htmlFiles = @(Get-ChildItem $outDir -Filter '*.html' -ErrorAction SilentlyContinue)
                 $htmlFiles.Count | Should -BeGreaterThan 0
             }
         }
@@ -274,7 +274,7 @@ Describe 'Invoke-S2DCapacityWhatIf' {
                 $outDir = Join-Path $td 'whatif-out-json'
                 Invoke-S2DCapacityWhatIf -BaselineSnapshot $snap `
                     -AddNodes 1 -OutputDirectory $outDir -Format @('Html','Json')
-                $jsonFiles = Get-ChildItem $outDir -Filter '*.json' -ErrorAction SilentlyContinue
+                $jsonFiles = @(Get-ChildItem $outDir -Filter '*.json' -ErrorAction SilentlyContinue)
                 $jsonFiles.Count | Should -BeGreaterThan 0
             }
         }

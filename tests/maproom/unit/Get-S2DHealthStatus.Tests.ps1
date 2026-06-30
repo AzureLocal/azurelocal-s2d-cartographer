@@ -202,6 +202,7 @@ Describe 'Get-S2DHealthStatus' {
                     WearPercentage    = 10
                     HealthStatus      = 'Warning'
                     OperationalStatus = 'Degraded'
+                    IsPoolMember      = $true
                 }
                 $Script:S2DSession.CollectedData['PhysicalDisks'] = @($degraded) + @($disks | Select-Object -Skip 1)
 
@@ -227,6 +228,7 @@ Describe 'Get-S2DHealthStatus' {
                     WearPercentage    = 85
                     HealthStatus      = 'Healthy'
                     OperationalStatus = 'OK'
+                    IsPoolMember      = $true
                 }
                 $Script:S2DSession.CollectedData['PhysicalDisks'] = @($worn) + @($disks | Select-Object -Skip 1)
 
@@ -390,7 +392,7 @@ Describe 'Get-S2DHealthStatus' {
                 $mraCheck.Status   | Should -Be 'Pass'
                 $mraCheck.Severity | Should -Be 'Info'
                 # Confirm the Warning (if any) comes only from ReserveAdequacy, not MaintenanceReserveN1
-                $nonPassMra = $results | Where-Object { $_.CheckName -eq 'MaintenanceReserveN1' -and $_.Status -ne 'Pass' }
+                $nonPassMra = @($results | Where-Object { $_.CheckName -eq 'MaintenanceReserveN1' -and $_.Status -ne 'Pass' })
                 $nonPassMra.Count | Should -Be 0
             }
         }
@@ -419,6 +421,7 @@ Describe 'Get-S2DHealthStatus' {
                     WearPercentage    = 10
                     HealthStatus      = 'Healthy'
                     OperationalStatus = 'OK'
+                    IsPoolMember      = $true
                 }
                 $Script:S2DSession.CollectedData['PhysicalDisks'] = @($mixed) + @($disks | Select-Object -Skip 1)
 

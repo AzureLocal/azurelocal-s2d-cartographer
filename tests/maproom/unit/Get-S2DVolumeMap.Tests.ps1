@@ -40,7 +40,7 @@ Describe 'Get-S2DVolumeMap' {
                     })
                 }
 
-                $result = Get-S2DVolumeMap
+                $result = @(Get-S2DVolumeMap)
 
                 $result.Count                    | Should -Be 1
                 $result[0].GetType().Name        | Should -Be 'S2DVolume'
@@ -233,7 +233,7 @@ Describe 'Get-S2DVolumeMap' {
                     )
                 }
 
-                $result = Get-S2DVolumeMap -VolumeName 'UserStorage_1'
+                $result = @(Get-S2DVolumeMap -VolumeName 'UserStorage_1')
 
                 $result.Count          | Should -Be 1
                 $result[0].FriendlyName | Should -Be 'UserStorage_1'

@@ -21,7 +21,13 @@ function Export-S2DHtmlReport {
     # (BOSS) and SAN-presented LUNs are not in S2D scope — their presence in
     # the report misleads the reader into thinking they are pool capacity.
     $allDisks = @($ClusterData.PhysicalDisks)
-    $disks = if ($IncludeNonPoolDisks) { $allDisks } else { @($allDisks | Where-Object { $_.IsPoolMember -ne $false }) }
+    # Use if/else statement (not expression) so the empty-array result is never null-collapsed
+    # by PowerShell's if-expression assignment semantics under StrictMode.
+    if ($IncludeNonPoolDisks) {
+        $disks = $allDisks
+    } else {
+        $disks = @($allDisks | Where-Object { $_.IsPoolMember -ne $false })
+    }
     $cache = $ClusterData.CacheTier
 
     # Part A: provisioning-aware 70% framing.

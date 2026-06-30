@@ -60,8 +60,9 @@ function Get-S2DCacheTierInfo {
         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
         Select-Object -Unique
     )
-    $isAllFlash = ($mediaTypes | Where-Object { $_ -notin 'NVMe','SSD','SCM' }).Count -eq 0 -and
-                   $mediaTypes.Count -gt 0
+    # StrictMode-safe: wrap in @() so .Count never fails when Where-Object yields $null.
+    $isAllFlash = (@($mediaTypes | Where-Object { $_ -notin 'NVMe','SSD','SCM' }).Count -eq 0) -and
+                   ($mediaTypes.Count -gt 0)
 
     # ── Query ClusterS2D for software cache details ───────────────────────────
     $clusterS2D = $null

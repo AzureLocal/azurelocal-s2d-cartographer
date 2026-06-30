@@ -65,17 +65,18 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
     }
 
     It 'uses the FQDN from NodeTargets when opening per-node CIM sessions' {
+        # Store captured names in the module-level $Script: scope via InModuleScope,
+        # then read them back after the call. This avoids Pester's scope isolation
+        # between the mock scriptblock (runs in module scope) and the test script scope.
         InModuleScope S2DCartographer {
-            # Make Resolve-S2DSession return a stub CIM session object so the fan-out
-            # branch is taken. A PSObject is a valid stand-in because New-CimSession
-            # is mocked to return one too.
+            $Script:_testCapturedNames = @()
+
             $stubClusterCim = [PSCustomObject]@{ ComputerName = 'clus.azrl.mgmt' }
             Mock Resolve-S2DSession { $stubClusterCim } -ModuleName S2DCartographer
 
-            $capturedComputerNames = @()
             Mock New-CimSession -ModuleName S2DCartographer -MockWith {
                 param($ComputerName)
-                $script:capturedComputerNames += $ComputerName
+                $Script:_testCapturedNames += $ComputerName
                 [PSCustomObject]@{ ComputerName = $ComputerName }
             } -ParameterFilter { $ComputerName }
 
@@ -88,24 +89,24 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
 
             $null = Get-S2DPhysicalDiskInventory
 
-            $script:capturedComputerNames | Should -Contain 'node01.azrl.mgmt'
-            $script:capturedComputerNames | Should -Contain 'node02.azrl.mgmt'
-            $script:capturedComputerNames | Should -Not -Contain 'node01'
-            $script:capturedComputerNames | Should -Not -Contain 'node02'
+            $Script:_testCapturedNames | Should -Contain 'node01.azrl.mgmt'
+            $Script:_testCapturedNames | Should -Contain 'node02.azrl.mgmt'
+            $Script:_testCapturedNames | Should -Not -Contain 'node01'
+            $Script:_testCapturedNames | Should -Not -Contain 'node02'
         }
     }
 
     It 'falls back to the short name when NodeTargets map is absent' {
         InModuleScope S2DCartographer {
             $Script:S2DSession.NodeTargets = @{}
+            $Script:_testCapturedNames = @()
 
             $stubClusterCim = [PSCustomObject]@{ ComputerName = 'clus.azrl.mgmt' }
             Mock Resolve-S2DSession { $stubClusterCim } -ModuleName S2DCartographer
 
-            $capturedComputerNames = @()
             Mock New-CimSession -ModuleName S2DCartographer -MockWith {
                 param($ComputerName)
-                $script:capturedComputerNames += $ComputerName
+                $Script:_testCapturedNames += $ComputerName
                 [PSCustomObject]@{ ComputerName = $ComputerName }
             } -ParameterFilter { $ComputerName }
 
@@ -118,8 +119,8 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
 
             $null = Get-S2DPhysicalDiskInventory
 
-            $script:capturedComputerNames | Should -Contain 'node01'
-            $script:capturedComputerNames | Should -Contain 'node02'
+            $Script:_testCapturedNames | Should -Contain 'node01'
+            $Script:_testCapturedNames | Should -Contain 'node02'
         }
     }
 }

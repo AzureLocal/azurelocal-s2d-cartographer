@@ -244,7 +244,9 @@ function Export-S2DWordReport {
         }
         $hrow = "<w:tr><w:trPr><w:tblHeader/></w:trPr>$($hcells -join '')</w:tr>"
         $rowIndex = 0
-        $drows = $rows | ForEach-Object {
+        # Guard against $null rows (e.g. empty Stages collection collapses ForEach-Object to $null).
+        $safeRows = @($rows | Where-Object { $null -ne $_ })
+        $drows = $safeRows | ForEach-Object {
             $obj  = $_
             $fill = if ($rowIndex % 2 -eq 0) { 'FFFFFF' } else { 'F5F5F5' }
             $rowIndex++

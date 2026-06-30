@@ -70,11 +70,18 @@ function Get-S2DStoragePoolInfo {
         $provisionedBytes   = $remoteResult.ProvisionedBytes
     }
     else {
+        # Filter out $null entries before Where-Object so that a mock returning $null
+        # (or a real call returning nothing) does not throw "Cannot operate on a null
+        # input object" under StrictMode — @($null) wraps null as a 1-element array.
         $rawPool = if ($session) {
-            Get-S2DStoragePoolData -CimSession $session | Where-Object IsPrimordial -eq $false | Select-Object -First 1
+            @(Get-S2DStoragePoolData -CimSession $session) |
+                Where-Object { $null -ne $_ -and -not $_.IsPrimordial } |
+                Select-Object -First 1
         }
         else {
-            Get-S2DStoragePoolData | Where-Object IsPrimordial -eq $false | Select-Object -First 1
+            @(Get-S2DStoragePoolData) |
+                Where-Object { $null -ne $_ -and -not $_.IsPrimordial } |
+                Select-Object -First 1
         }
 
         if (-not $rawPool) {
