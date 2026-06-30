@@ -439,7 +439,7 @@ Describe '#58 Named config references — health-checks.json loads correctly (AB
 Describe '#59 Config hot-swap — Export-S2DHealthConfig (AB#269)' {
 
     BeforeAll {
-        $script:ExportDir = Join-Path $env:TEMP 'S2DCartographerTests'
+        $script:ExportDir = Join-Path ([System.IO.Path]::GetTempPath()) 'S2DCartographerTests'
         if (-not (Test-Path $script:ExportDir)) { New-Item -ItemType Directory -Path $script:ExportDir | Out-Null }
         $script:ExportPath = Join-Path $script:ExportDir 'health-checks-export.json'
     }
@@ -472,7 +472,7 @@ Describe '#59 Config hot-swap — Export-S2DHealthConfig (AB#269)' {
 Describe '#59 Config hot-swap — Import-S2DHealthConfig (AB#269)' {
 
     BeforeAll {
-        $script:ExportDir  = Join-Path $env:TEMP 'S2DCartographerTests'
+        $script:ExportDir  = Join-Path ([System.IO.Path]::GetTempPath()) 'S2DCartographerTests'
         if (-not (Test-Path $script:ExportDir)) { New-Item -ItemType Directory -Path $script:ExportDir | Out-Null }
         $script:ExportPath = Join-Path $script:ExportDir 'health-checks-export.json'
         $script:BadJson    = Join-Path $script:ExportDir 'health-checks-bad.json'
