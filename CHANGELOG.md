@@ -8,6 +8,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-06-29
+
+> **Wave 2 — Legibility.** Capacity figures are now unambiguous in unit and space. No capacity math
+> changed.
+
+### Added
+
+- The capacity waterfall and HTML report label every figure with both its unit (decimal **TB** and
+  binary **TiB**) and its space — each stage is badged `FOOTPRINT`, `DATA (usable)`, or
+  `INFORMATIONAL`. (AB#4645)
+- 70% planning line — **70% of available-for-volumes**, compared against consumed volume
+  **footprint** (matches Surveyor's definition exactly). Surfaced as `PlanningLine70Pct` /
+  `IsAbove70PctLine` on `S2DCapacityWaterfall`, as a KPI tile (amber when crossed) and a dashed
+  plan-line on the HTML report chart. (AB#4644)
+
 ## [1.5.0] — 2026-06-29
 
 > **Wave 1 — Capacity accuracy.** The capacity waterfall is reconciled to the canonical model
