@@ -96,4 +96,7 @@ class S2DClusterData {
     [S2DHealthCheck[]]     $HealthChecks
     [string]               $OverallHealth
     [S2DCapacityWaterfall] $CapacityWaterfall
+    # Expansion headroom — how much room remains at 70/80/90/100% fill thresholds.
+    # Populated by Get-S2DExpansionHeadroom after the waterfall and volume collection.
+    [object]               $ExpansionHeadroom
 }

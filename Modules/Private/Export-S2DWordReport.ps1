@@ -406,6 +406,34 @@ $($drows -join '')
         -colWidths @(1680, 1120, 900, 900, 670, 780, 1000, 1000, 1310)
     $body += PageBreak
 
+    # Expansion Headroom
+    $body += SectionHeader 'Expansion Headroom'
+    $body += Spacer
+    $eh = $ClusterData.ExpansionHeadroom
+    if ($eh) {
+        $body += Para "Current utilization: $($eh.CurrentUtilizationPct)% of Available-for-Volumes (footprint basis). New-volume usable data assumes $($eh.PrevalentDataCopies) data copies (prevailing resiliency — assumed for estimates)." `
+            -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 120
+        $ehRows = $eh.Thresholds | ForEach-Object {
+            $planNote = if ($_.IsRecommendedPlanningLine) { ' [Planning line]' } else { '' }
+            $pastNote = if ($_.IsPastLine) { ' [PAST]' } else { '' }
+            [PSCustomObject]@{
+                FillTarget        = "$($_.FillTargetPct)%$planNote$pastNote"
+                FootprintBudget   = "$($_.FootprintBudget.TB) TB / $($_.FootprintBudget.TiB) TiB"
+                RemainingFP       = "$($_.RemainingFootprint.TB) TB / $($_.RemainingFootprint.TiB) TiB"
+                NewUsableData     = "$($_.NewUsableData.TB) TB / $($_.NewUsableData.TiB) TiB"
+            }
+        }
+        # 4 columns: FillTarget=900 FootprintBudget=2820 RemainingFP=2820 NewUsableData=2820 (total=9360)
+        $body += DataTable `
+            -headers @('Fill Target', 'Footprint Budget', 'Remaining Footprint', 'New Usable Data') `
+            -rows $ehRows `
+            -props @('FillTarget', 'FootprintBudget', 'RemainingFP', 'NewUsableData') `
+            -colWidths @(900, 2820, 2820, 2820)
+    } else {
+        $body += Para 'Expansion headroom data not available (waterfall required).' -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 60
+    }
+    $body += PageBreak
+
     # Health Assessment
     $body += SectionHeader 'Health Assessment'
     $body += Spacer

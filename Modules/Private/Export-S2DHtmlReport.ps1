@@ -164,6 +164,37 @@ function Export-S2DHtmlReport {
         "<tr><td>$($_.FriendlyName)$infraTag</td><td>$($_.ResiliencySettingName) ($($_.NumberOfDataCopies) copies)</td><td>$(if($_.Size){"$($_.Size.TiB) TiB"}else{'N/A'})</td><td>$(if($_.FootprintOnPool){"$($_.FootprintOnPool.TiB) TiB"}else{'N/A'})</td><td>$($_.EfficiencyPercent)%</td><td>$($_.ProvisioningType)</td>$thinCells<td>$hs</td></tr>"
     }) -join "`n"
 
+    # ── Expansion headroom table + chart data ────────────────────────────────
+    $eh = $ClusterData.ExpansionHeadroom
+    $ehCurrentPct   = if ($eh) { $eh.CurrentUtilizationPct } else { 0 }
+    $ehCopies       = if ($eh) { $eh.PrevalentDataCopies }   else { 2 }
+    $ehTableRows    = ''
+    $ehChartLabels  = ''
+    $ehChartTB      = ''
+    $ehChartTiB     = ''
+    $ehPastAny      = $false
+    if ($eh -and $eh.Thresholds) {
+        $ehTableRows = ($eh.Thresholds | ForEach-Object {
+            $t = $_
+            $rowStyle  = if ($t.IsRecommendedPlanningLine) { " style='background:#fffde7'" } else { '' }
+            $planBadge = if ($t.IsRecommendedPlanningLine) {
+                " <span style='font-size:10px;background:#fff4ce;color:#d47a00;border-radius:3px;padding:1px 6px;margin-left:4px;font-weight:700'>Recommended planning line</span>"
+            } else { '' }
+            $pastBadge = if ($t.IsPastLine) {
+                " <span style='font-size:10px;background:#fde7e9;color:#d13438;border-radius:3px;padding:1px 6px;margin-left:4px;font-weight:700'>PAST</span>"
+                $ehPastAny = $true
+            } else { '' }
+            $budgetStr    = "$($t.FootprintBudget.TB) TB / $($t.FootprintBudget.TiB) TiB"
+            $remainFPStr  = "$($t.RemainingFootprint.TB) TB / $($t.RemainingFootprint.TiB) TiB"
+            $remainDStr   = "$($t.NewUsableData.TB) TB / $($t.NewUsableData.TiB) TiB"
+            "<tr$rowStyle><td style='font-weight:700'>$($t.FillTargetPct)%$planBadge$pastBadge</td><td>$budgetStr</td><td>$remainFPStr</td><td>$remainDStr</td></tr>"
+        }) -join "`n"
+
+        $ehChartLabels = ($eh.Thresholds | ForEach-Object { "'$($_.FillTargetPct)%'" }) -join ','
+        $ehChartTB     = ($eh.Thresholds | ForEach-Object { [math]::Round($_.NewUsableData.TB,  2) }) -join ','
+        $ehChartTiB    = ($eh.Thresholds | ForEach-Object { [math]::Round($_.NewUsableData.TiB, 2) }) -join ','
+    }
+
     # ── Health check cards ────────────────────────────────────────────────────
     $hcCards = ($hc | ForEach-Object {
         $cls = switch ($_.Status) { 'Pass'{'hc-pass'} 'Warn'{'hc-warn'} 'Fail'{'hc-fail'} default{'hc-info'} }
@@ -298,6 +329,16 @@ tr:hover{background:#f3f2f1}
     <thead><tr><th>Volume</th><th>Resiliency</th><th>Size</th><th>Pool Footprint</th><th>Efficiency</th><th>Provisioning</th><th>Growth Headroom</th><th>Max Potential Footprint</th><th>Health</th></tr></thead>
     <tbody>$volRows</tbody>
   </table>
+</div>
+
+<div class="section">
+  <h2>Expansion Headroom</h2>
+  <p style="margin-bottom:12px;font-size:12px;color:var(--muted)">How much room remains to expand existing volumes or create new ones, measured against Available-for-Volumes (footprint basis). New-volume usable data assumes <strong>$ehCopies data copies</strong> (prevailing resiliency — assumed for estimates). Current pool utilization: <strong>$ehCurrentPct%</strong> of available-for-volumes.</p>
+  <table style="margin-bottom:16px">
+    <thead><tr style="background:#f3f2f1"><th>Fill target</th><th>Footprint budget (TB / TiB)</th><th>Remaining footprint (TB / TiB)</th><th>New usable data (TB / TiB)</th></tr></thead>
+    <tbody>$ehTableRows</tbody>
+  </table>
+  <div style="position:relative;height:220px"><canvas id="ehChart"></canvas></div>
 </div>
 
 <div class="section">
@@ -538,6 +579,41 @@ new Chart(phCtx, {
   },
   plugins: [phBoundaryPlugin]
 });
+
+// ── Expansion Headroom chart ──────────────────────────────────────────────
+(function() {
+  const ehLabels  = [$ehChartLabels];
+  const ehTB      = [$ehChartTB];
+  const ehTiB     = [$ehChartTiB];
+  const ehColors  = ['#107c10','#0078d4','#e8a218','#a19f9d'];
+  const ehEl = document.getElementById('ehChart');
+  if (!ehEl || !ehLabels.length) return;
+  let ehUseTiB = false;  // default TB for this chart
+  new Chart(ehEl.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ehLabels,
+      datasets: [{
+        label: 'New usable data remaining (TB)',
+        data: ehTB,
+        backgroundColor: ehColors,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.raw + (ehUseTiB ? ' TiB' : ' TB') + ' new usable data' } },
+        title: { display: true, text: 'New usable data capacity remaining at each fill threshold', font: { size: 12 }, color: '#605e5c', padding: { bottom: 8 } }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'TB' }, grid: { color: '#edebe9' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+})();
 
 // Custom legend for pool health bar
 (function() {

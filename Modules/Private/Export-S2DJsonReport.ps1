@@ -45,6 +45,7 @@ function Export-S2DJsonReport {
         CacheTier          = $ClusterData.CacheTier
         CapacityWaterfall  = $ClusterData.CapacityWaterfall
         HealthChecks       = @($ClusterData.HealthChecks)
+        ExpansionHeadroom  = $ClusterData.ExpansionHeadroom
     }
 
     # Depth 10 is enough for S2DCapacity (3 deep) nested inside waterfall stages

@@ -17,7 +17,8 @@ function Get-S2DResiliencyEfficiency {
         2 = dual parity.
 
     .PARAMETER NodeCount
-        Cluster node count. Drives nested-mirror detection for 2-node clusters.
+        Cluster node count. Kept for parity / Parity efficiency calculations; no longer
+        used to infer nested-mirror from node count — use NumberOfDataCopies=4 explicitly.
 
     .OUTPUTS
         PSCustomObject with ResiliencyType (display name), EfficiencyPercent, Description.
@@ -42,19 +43,13 @@ function Get-S2DResiliencyEfficiency {
     if ($ResiliencySettingName -eq 'Mirror') {
         switch ($NumberOfDataCopies) {
             2 {
-                # Two-node nested mirror check
-                if ($NodeCount -le 2) {
-                    [PSCustomObject]@{
-                        ResiliencyType    = 'Nested Two-Way Mirror'
-                        EfficiencyPercent = 25.0
-                        Description       = 'Two-way mirror inside two-way mirror (2-node only). Usable = footprint ÷ 4.'
-                    }
-                } else {
-                    [PSCustomObject]@{
-                        ResiliencyType    = 'Two-Way Mirror'
-                        EfficiencyPercent = 50.0
-                        Description       = 'Two-way mirror. Usable = footprint ÷ 2. Requires minimum 2 nodes.'
-                    }
+                # NumberOfDataCopies=2 is always a plain two-way mirror (50% efficiency).
+                # A nested two-way mirror writes 4 physical copies and reports
+                # NumberOfDataCopies=4 — use that value, not node count, to detect nesting.
+                [PSCustomObject]@{
+                    ResiliencyType    = 'Two-Way Mirror'
+                    EfficiencyPercent = 50.0
+                    Description       = 'Two-way mirror. Usable = footprint ÷ 2. Requires minimum 2 nodes.'
                 }
             }
             3 {
@@ -62,6 +57,15 @@ function Get-S2DResiliencyEfficiency {
                     ResiliencyType    = 'Three-Way Mirror'
                     EfficiencyPercent = 33.3
                     Description       = 'Three-way mirror. Usable = footprint ÷ 3. Requires minimum 3 nodes.'
+                }
+            }
+            4 {
+                # Nested two-way mirror (two-way inside two-way) — writes 4 copies.
+                # Available on 2-node clusters. NumberOfDataCopies is 4 in this config.
+                [PSCustomObject]@{
+                    ResiliencyType    = 'Nested Two-Way Mirror'
+                    EfficiencyPercent = 25.0
+                    Description       = 'Nested two-way mirror (2-node). Writes 4 copies. Usable = footprint ÷ 4.'
                 }
             }
             default {

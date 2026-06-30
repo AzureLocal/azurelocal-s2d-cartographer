@@ -8,6 +8,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.7.1] — 2026-06-30
+
+### Added
+
+- **Expansion Headroom** report section (HTML, Word, PDF, JSON) — at 70% / 80% / 90% / 100% pool-fill
+  targets, shows the remaining pool footprint and the **new usable data** you can still store
+  (footprint ÷ resiliency copies), in both TB and TiB, with a Chart.js chart. The 70% row is styled as the
+  recommended planning line. Math is identical to Surveyor's so the two tools reconcile by construction.
+
+### Fixed
+
+- Per-volume **capacity efficiency** is now derived from the measured `FootprintOnPool ÷ Size` ratio (ground
+  truth) when available. A two-copy mirror correctly reports **50%** efficiency; the previous logic
+  mislabeled it as **25%** ("nested two-way mirror") on two-node clusters. Nested two-way mirror, which
+  writes four copies, correctly reports 25%.
+
 ## [1.7.0] — 2026-06-30
 
 > **Wave 3 — Validation & report correctness.** Locks accuracy against regression and fixes the

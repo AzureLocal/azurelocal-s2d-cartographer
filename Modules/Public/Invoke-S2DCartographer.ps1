@@ -289,6 +289,15 @@ function Invoke-S2DCartographer {
         $clusterData.HealthChecks      = $healthChecks
         $clusterData.OverallHealth     = $overallHealth
 
+        # Expansion headroom — computed after waterfall + volumes are both available
+        Write-Log "Computing expansion headroom..."
+        $clusterData.ExpansionHeadroom = if ($waterfall -and $waterfall.AvailableForVolumes) {
+            Get-S2DExpansionHeadroom -Waterfall $waterfall -Volumes $volumes
+        } else { $null }
+        if ($clusterData.ExpansionHeadroom) {
+            Write-Log "Expansion headroom: util=$($clusterData.ExpansionHeadroom.CurrentUtilizationPct)% copies=$($clusterData.ExpansionHeadroom.PrevalentDataCopies)"
+        }
+
         # ── Step 4: Generate reports ──────────────────────────────────────────
         $outputFiles = @()
         if ($Format) {

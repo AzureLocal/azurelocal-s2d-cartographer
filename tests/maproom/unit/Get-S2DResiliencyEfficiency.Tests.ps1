@@ -29,20 +29,43 @@ Describe 'Get-S2DResiliencyEfficiency' {
         }
     }
 
-    Context 'Mirror - Nested Two-Way (NumberOfDataCopies=2, NodeCount <= 2)' {
-        It '2-node: ResiliencyType = "Nested Two-Way Mirror"' {
+    Context 'Mirror - Two-Way always 50% regardless of node count (NumberOfDataCopies=2)' {
+        # Bug fix (1.7.1): NumberOfDataCopies=2 is ALWAYS a plain two-way mirror at 50%.
+        # Nested two-way mirror writes 4 copies → NumberOfDataCopies=4 → 25%.
+        # The old code used NodeCount<=2 to infer nesting; that was wrong because
+        # a 2-node cluster can run a plain two-way mirror at 50% efficiency.
+        It '2-node: ResiliencyType = "Two-Way Mirror" (not Nested)' {
             InModuleScope S2DCartographer {
-                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 2 -NodeCount 2).ResiliencyType | Should -Be 'Nested Two-Way Mirror'
+                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 2 -NodeCount 2).ResiliencyType | Should -Be 'Two-Way Mirror'
             }
         }
-        It '2-node: efficiency = 25.0%' {
+        It '2-node: efficiency = 50.0% (not 25%)' {
             InModuleScope S2DCartographer {
-                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 2 -NodeCount 2).EfficiencyPercent | Should -Be 25.0
+                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 2 -NodeCount 2).EfficiencyPercent | Should -Be 50.0
             }
         }
-        It '1-node: also returns Nested Two-Way Mirror' {
+        It '1-node: also returns Two-Way Mirror at 50%' {
             InModuleScope S2DCartographer {
-                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 2 -NodeCount 1).ResiliencyType | Should -Be 'Nested Two-Way Mirror'
+                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 2 -NodeCount 1).ResiliencyType | Should -Be 'Two-Way Mirror'
+            }
+        }
+    }
+
+    Context 'Mirror - Nested Two-Way (NumberOfDataCopies=4)' {
+        It 'ResiliencyType = "Nested Two-Way Mirror"' {
+            InModuleScope S2DCartographer {
+                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 4 -NodeCount 2).ResiliencyType | Should -Be 'Nested Two-Way Mirror'
+            }
+        }
+        It 'efficiency = 25.0%' {
+            InModuleScope S2DCartographer {
+                (Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 4 -NodeCount 2).EfficiencyPercent | Should -Be 25.0
+            }
+        }
+        It 'Description mentions 4 copies / footprint ÷ 4' {
+            InModuleScope S2DCartographer {
+                $r = Get-S2DResiliencyEfficiency -ResiliencySettingName Mirror -NumberOfDataCopies 4 -NodeCount 2
+                $r.Description | Should -Match '4'
             }
         }
     }

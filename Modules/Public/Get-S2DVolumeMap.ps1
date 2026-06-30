@@ -101,7 +101,14 @@ function Get-S2DVolumeMap {
         $vol.HealthStatus           = try { [string]$vd.HealthStatus }       catch { 'Unknown' }
         $vol.IsDeduplicationEnabled = $false
         $vol.IsInfrastructureVolume = $isInfra
-        $vol.EfficiencyPercent      = $effResult.EfficiencyPercent
+        # Ground-truth efficiency: derive from measured footprint/size when both are
+        # available (eliminates any resiliency-detection error). Falls back to the
+        # formula result only when footprint data is absent (e.g. very old clusters).
+        $vol.EfficiencyPercent      = if ($footprintBytes -gt 0 -and $sizeBytes -gt 0) {
+            [math]::Round($sizeBytes / $footprintBytes * 100, 1)
+        } else {
+            $effResult.EfficiencyPercent
+        }
         $vol.OvercommitRatio        = $overcommitRatio
 
         # Thin provisioning growth metrics — only meaningful for thin volumes
