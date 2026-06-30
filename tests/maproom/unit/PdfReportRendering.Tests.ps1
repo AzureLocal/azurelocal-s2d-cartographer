@@ -87,9 +87,12 @@ BeforeAll {
         $cd
     }
 
-    # Render HTML to a temp file once; all Describes share this string
+    # Render HTML to a temp file once; all Describes share this string.
+    # [System.IO.Path]::GetTempPath() is cross-platform (/tmp on Linux, %TEMP% on Windows).
+    # $env:TEMP is Windows-only and is empty on Linux, which makes Split-Path -Parent return
+    # an empty string and causes a ParameterBindingValidationException at Export-S2DHtmlReport:578.
     $tmpPath = [System.IO.Path]::Combine(
-        $env:TEMP,
+        [System.IO.Path]::GetTempPath(),
         "S2DCartographer-PdfRenderTest-$([System.IO.Path]::GetRandomFileName()).html"
     )
     try {

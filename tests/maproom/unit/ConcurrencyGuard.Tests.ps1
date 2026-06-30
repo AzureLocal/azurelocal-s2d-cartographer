@@ -311,6 +311,18 @@ Describe 'Empty-Data Safeguards' {
                 )
                 $Script:S2DSession.CollectedData['StoragePool'] = $null
                 $Script:S2DSession.CollectedData['Volumes']     = @()
+
+                # Mock all Windows-only Storage cmdlet shims so the test runs on Linux.
+                # When CollectedData['StoragePool'] is $null, Get-S2DCapacityWaterfall falls
+                # through to Get-S2DStoragePoolInfo, which calls Get-S2DStoragePoolData
+                # (wrapping Get-StoragePool). That cmdlet does not exist on Linux.
+                # When CollectedData['Volumes'] is @(), Get-S2DVolumeMap is invoked, which
+                # calls Get-S2DVirtualDiskData (wrapping Get-VirtualDisk) — also Windows-only.
+                # Resolve-S2DSession is mocked to prevent any CIM session construction.
+                # This mirrors the pattern used by Get-S2DStoragePoolInfo.Tests.ps1.
+                Mock Resolve-S2DSession      { return $null } -ModuleName S2DCartographer
+                Mock Get-S2DStoragePoolData  { return $null } -ModuleName S2DCartographer
+                Mock Get-S2DVirtualDiskData  { return @()  } -ModuleName S2DCartographer
             }
         }
 
