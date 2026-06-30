@@ -14,7 +14,7 @@ Describe 'Invoke-S2DWaterfallCalculation' {
     # Stage 4: 60,820,000,000,000 - 15,360,000,000,000 = 45,460,000,000,000
     # Stage 5: 45,460,000,000,000 - 1,572,864,000,000  = 43,887,136,000,000
     # Stage 6: 43,887,136,000,000
-    # Stage 7 (Usable Capacity): 43,887,136,000,000 / 3.0 = 14,629,045,333,333  ← pipeline terminus
+    # Stage 7 (Usable Capacity): 43,887,136,000,000 / 2.0 = 21,943,568,000,000  ← pipeline terminus (AB#4642: default changed 3.0→2.0)
 
     # Note: $script: vars are invisible inside InModuleScope — use literals or -Parameters
     # All constants defined here for the Describe block's documentation value only.
@@ -201,7 +201,7 @@ Describe 'Invoke-S2DWaterfallCalculation' {
             }
         }
 
-        It 'Stage 7 (After Resiliency) = Stage 6 ÷ ResiliencyFactor (default 3.0)' {
+        It 'Stage 7 (After Resiliency) = Stage 6 ÷ ResiliencyFactor (default 2.0 — AB#4642)' {
             InModuleScope S2DCartographer {
                 $result = Invoke-S2DWaterfallCalculation `
                     -RawDiskBytes         ([int64]61440000000000) `
@@ -210,7 +210,8 @@ Describe 'Invoke-S2DWaterfallCalculation' {
                     -PoolTotalBytes       ([int64]60820000000000) `
                     -PoolFreeBytes        ([int64]40820000000000) `
                     -InfraVolumeBytes     ([int64]1572864000000)
-                $expected = [int64]($result.Stages[5].Size.Bytes / 3.0)
+                # Default is now 2.0 (two-way mirror — minimum-safe assumption) not 3.0.
+                $expected = [int64]($result.Stages[5].Size.Bytes / 2.0)
                 $result.Stages[6].Size.Bytes | Should -Be $expected
             }
         }
@@ -271,19 +272,20 @@ Describe 'Invoke-S2DWaterfallCalculation' {
             }
         }
 
-        It 'BlendedEfficiencyPercent is 33.3 for 3-way mirror' {
+        It 'BlendedEfficiencyPercent is 50.0 for default (2-way mirror assumed — AB#4642)' {
             InModuleScope S2DCartographer {
+                # Default ResiliencyFactor is now 2.0, so default efficiency is 50.0%.
                 $result = Invoke-S2DWaterfallCalculation `
                     -RawDiskBytes         ([int64]61440000000000) `
                     -NodeCount            4 `
                     -LargestDiskSizeBytes ([int64]3840000000000) `
                     -PoolTotalBytes       ([int64]60820000000000) `
                     -PoolFreeBytes        ([int64]40820000000000)
-                $result.BlendedEfficiencyPercent | Should -Be 33.3
+                $result.BlendedEfficiencyPercent | Should -Be 50.0
             }
         }
 
-        It 'BlendedEfficiencyPercent is 50.0 for 2-way mirror' {
+        It 'BlendedEfficiencyPercent is 33.3 for explicit 3-way mirror' {
             InModuleScope S2DCartographer {
                 $result = Invoke-S2DWaterfallCalculation `
                     -RawDiskBytes         ([int64]61440000000000) `
@@ -291,7 +293,22 @@ Describe 'Invoke-S2DWaterfallCalculation' {
                     -LargestDiskSizeBytes ([int64]3840000000000) `
                     -PoolTotalBytes       ([int64]60820000000000) `
                     -PoolFreeBytes        ([int64]40820000000000) `
-                    -ResiliencyFactor     2.0
+                    -ResiliencyFactor     3.0 `
+                    -ResiliencyName       '3-way mirror'
+                $result.BlendedEfficiencyPercent | Should -Be 33.3
+            }
+        }
+
+        It 'BlendedEfficiencyPercent is 50.0 for explicit 2-way mirror' {
+            InModuleScope S2DCartographer {
+                $result = Invoke-S2DWaterfallCalculation `
+                    -RawDiskBytes         ([int64]61440000000000) `
+                    -NodeCount            4 `
+                    -LargestDiskSizeBytes ([int64]3840000000000) `
+                    -PoolTotalBytes       ([int64]60820000000000) `
+                    -PoolFreeBytes        ([int64]40820000000000) `
+                    -ResiliencyFactor     2.0 `
+                    -ResiliencyName       '2-way mirror'
                 $result.BlendedEfficiencyPercent | Should -Be 50.0
             }
         }

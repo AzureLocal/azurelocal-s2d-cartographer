@@ -42,11 +42,21 @@ function Invoke-S2DWaterfallCalculation {
         Infrastructure volume pool footprint in bytes (Stage 5 deduction).
 
     .PARAMETER ResiliencyFactor
-        Number of data copies for resiliency (default 3.0 for 3-way mirror).
+        Number of data copies for resiliency.
+        Default 2.0 (two-way mirror) — the minimum-safe S2D assumption when no actual
+        NumberOfDataCopies can be read from pool or volume settings. When the default
+        is used the report labels it as an assumed value, not a measured one. (AB#4642)
         Stage 7 = Stage 6 / ResiliencyFactor.
 
     .PARAMETER ResiliencyName
-        Human-readable label for the resiliency type (default '3-way mirror').
+        Human-readable label for the resiliency type.
+        Default '2-way mirror (assumed)' — updated when actual pool/volume data supplies
+        a confirmed copy count (AB#4642).
+
+    .PARAMETER ResiliencyIsAssumed
+        When $true the caller did not supply an actual NumberOfDataCopies; the fallback
+        default was used. Stage 7 and the waterfall object description are tagged to
+        distinguish assumed from measured values in reports. (AB#4642)
     #>
     [CmdletBinding()]
     [OutputType([S2DCapacityWaterfall])]
@@ -64,8 +74,12 @@ function Invoke-S2DWaterfallCalculation {
         [int64]  $PoolFreeBytes         = 0,
         [double] $PoolOverheadFraction  = 0.01,
         [int64]  $InfraVolumeBytes      = 0,
-        [double] $ResiliencyFactor      = 3.0,
-        [string] $ResiliencyName        = '3-way mirror'
+        # AB#4642: safe minimum-assumption fallback changed from 3.0 to 2.0.
+        # Two-way mirror is valid on as few as 2 nodes; three-way requires ≥3 nodes.
+        # Callers that have read actual NumberOfDataCopies must pass the real value.
+        [double] $ResiliencyFactor      = 2.0,
+        [string] $ResiliencyName        = '2-way mirror (assumed)',
+        [switch] $ResiliencyIsAssumed
     )
 
     # ── Stage 1: Raw physical ─────────────────────────────────────────────────
@@ -99,6 +113,8 @@ function Invoke-S2DWaterfallCalculation {
     # ── Stage 7: Theoretical resiliency ──────────────────────────────────────
     $stage7Bytes = [int64]($stage6Bytes / $ResiliencyFactor)
     $theoreticalEffPct = [math]::Round(100.0 / $ResiliencyFactor, 1)
+    # AB#4642: tag assumed vs measured so reports can label them differently.
+    $resiliencyTag = if ($ResiliencyIsAssumed) { ' [ASSUMED — actual NumberOfDataCopies not available]' } else { '' }
 
     # Stage 7 is the pipeline terminus — no Stage 8.
 
@@ -128,7 +144,7 @@ function Invoke-S2DWaterfallCalculation {
         (New-Stage 4 'Reserve'                $stage4Bytes $stage3Bytes   "Per Microsoft: one drive per server, up to 4 servers. $([math]::Min($NodeCount,4)) × $('{0:N2}' -f ($LargestDiskSizeBytes/1TB)) TB = $('{0:N2}' -f ($reserveBytes/1TB)) TB held for repair."),
         (New-Stage 5 'Infrastructure Volume'  $stage5Bytes $stage4Bytes   "Azure Local system volume pool footprint deducted. $infraDisplay"),
         (New-Stage 6 'Available for Volumes'  $stage6Bytes $stage5Bytes   "Pool space remaining for workload volume footprint after all deductions."),
-        (New-Stage 7 'Usable Capacity'        $stage7Bytes $stage6Bytes   "$ResiliencyName writes $([int]$ResiliencyFactor) copies of every byte. $('{0:N2}' -f ($stage6Bytes/1TB)) TB pool ÷ $([int]$ResiliencyFactor) copies = $('{0:N2}' -f ($stage7Bytes/1TB)) TB you can actually store.")
+        (New-Stage 7 'Usable Capacity'        $stage7Bytes $stage6Bytes   "$ResiliencyName writes $([int]$ResiliencyFactor) copies of every byte. $('{0:N2}' -f ($stage6Bytes/1TB)) TB pool ÷ $([int]$ResiliencyFactor) copies = $('{0:N2}' -f ($stage7Bytes/1TB)) TB you can actually store.$resiliencyTag")
     )
 
     $wf = [S2DCapacityWaterfall]::new()

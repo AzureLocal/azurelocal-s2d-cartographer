@@ -70,27 +70,35 @@ function Get-S2DCapacityWaterfall {
         elseif ($iv.Size)        { $infraBytes += $iv.Size.Bytes }
     }
 
-    # Resiliency factor from pool settings; default 3-way mirror
-    $resiliencyFactor = 3.0
-    $resiliencyName   = '3-way mirror'
+    # AB#4642: prefer actual NumberOfDataCopies from pool Mirror resiliency settings.
+    # Fallback is 2.0 (two-way mirror — minimum-safe S2D assumption) rather than the
+    # former 3.0 default which understated usable capacity on 2-copy clusters by 33%.
+    # When falling back, pass -ResiliencyIsAssumed so the report labels it clearly.
+    $resiliencyFactor    = 2.0
+    $resiliencyName      = '2-way mirror (assumed)'
+    $resiliencyIsAssumed = $true
     if ($pool -and $pool.ResiliencySettings) {
         $mirrorSetting = @($pool.ResiliencySettings | Where-Object { $_.Name -eq 'Mirror' }) | Select-Object -First 1
         if ($mirrorSetting -and $mirrorSetting.NumberOfDataCopies -gt 0) {
-            $resiliencyFactor = [double]$mirrorSetting.NumberOfDataCopies
-            $resiliencyName   = "$($mirrorSetting.NumberOfDataCopies)-way mirror"
+            $resiliencyFactor    = [double]$mirrorSetting.NumberOfDataCopies
+            $resiliencyName      = "$($mirrorSetting.NumberOfDataCopies)-way mirror"
+            $resiliencyIsAssumed = $false
         }
     }
 
     # ── Compute waterfall via pure function ───────────────────────────────────
-    $waterfall = Invoke-S2DWaterfallCalculation `
-        -RawDiskBytes        $rawDiskBytes `
-        -NodeCount           $nodeCount `
-        -LargestDiskSizeBytes $largestDriveBytes `
-        -PoolTotalBytes      $poolTotalBytes `
-        -PoolFreeBytes       $poolFreeBytes `
-        -InfraVolumeBytes    $infraBytes `
-        -ResiliencyFactor    $resiliencyFactor `
-        -ResiliencyName      $resiliencyName
+    $waterfallParams = @{
+        RawDiskBytes         = $rawDiskBytes
+        NodeCount            = $nodeCount
+        LargestDiskSizeBytes = $largestDriveBytes
+        PoolTotalBytes       = $poolTotalBytes
+        PoolFreeBytes        = $poolFreeBytes
+        InfraVolumeBytes     = $infraBytes
+        ResiliencyFactor     = $resiliencyFactor
+        ResiliencyName       = $resiliencyName
+    }
+    if ($resiliencyIsAssumed) { $waterfallParams['ResiliencyIsAssumed'] = $true }
+    $waterfall = Invoke-S2DWaterfallCalculation @waterfallParams
 
     # Overcommit state is live-cluster context — set it here, not in the pure function
     $waterfall.IsOvercommitted = $pool -and $pool.OvercommitRatio -gt 1.0

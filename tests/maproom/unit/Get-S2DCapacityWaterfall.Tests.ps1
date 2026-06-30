@@ -160,11 +160,12 @@ Describe 'Get-S2DCapacityWaterfall' {
             }
         }
 
-        It 'Stage 7 (After Resiliency) equals Stage 6 divided by resiliency factor (default 3.0)' {
+        It 'Stage 7 (After Resiliency) equals Stage 6 divided by resiliency factor (default 2.0 — AB#4642)' {
             InModuleScope S2DCartographer {
+                # Pool fixture has no ResiliencySettings → falls back to 2.0 (minimum-safe assumption).
                 $result   = Get-S2DCapacityWaterfall
                 $stage6   = $result.Stages[5].Size.Bytes
-                $expected = [int64]($stage6 / 3.0)
+                $expected = [int64]($stage6 / 2.0)
                 $result.Stages[6].Size.Bytes | Should -Be $expected
             }
         }
@@ -201,9 +202,9 @@ Describe 'Get-S2DCapacityWaterfall' {
 
         It 'BlendedEfficiencyPercent reflects theoretical resiliency efficiency' {
             InModuleScope S2DCartographer {
-                # Default 3-way mirror → 33.3% efficiency
+                # Pool fixture has no ResiliencySettings → falls back to 2-way mirror (AB#4642) → 50.0%
                 $result = Get-S2DCapacityWaterfall
-                $result.BlendedEfficiencyPercent | Should -Be 33.3
+                $result.BlendedEfficiencyPercent | Should -Be 50.0
             }
         }
     }

@@ -151,27 +151,34 @@ function Invoke-S2DCapacityWhatIf {
         $baseInfraBytes += $fp
     }
 
-    # Baseline resiliency factor
-    $baseResFactor = 3.0
-    $baseResName   = '3-way mirror'
+    # AB#4642: prefer actual NumberOfDataCopies from pool Mirror resiliency settings.
+    # Fallback changed from 3.0 to 2.0 (minimum-safe S2D assumption). When falling
+    # back, pass -ResiliencyIsAssumed so the report labels it as assumed, not measured.
+    $baseResFactor       = 2.0
+    $baseResName         = '2-way mirror (assumed)'
+    $baseResIsAssumed    = $true
     if ($basePool -and $basePool.ResiliencySettings) {
         $m = @($basePool.ResiliencySettings | Where-Object { $_.Name -eq 'Mirror' }) | Select-Object -First 1
         if ($m -and $m.NumberOfDataCopies -gt 0) {
-            $baseResFactor = [double]$m.NumberOfDataCopies
-            $baseResName   = "$($m.NumberOfDataCopies)-way mirror"
+            $baseResFactor    = [double]$m.NumberOfDataCopies
+            $baseResName      = "$($m.NumberOfDataCopies)-way mirror"
+            $baseResIsAssumed = $false
         }
     }
 
     # Compute baseline waterfall
-    $baselineWaterfall = Invoke-S2DWaterfallCalculation `
-        -RawDiskBytes         $baseRawBytes `
-        -NodeCount            $baseNodeCount `
-        -LargestDiskSizeBytes $baseLargestDrive `
-        -PoolTotalBytes       $basePoolTotalBytes `
-        -PoolFreeBytes        $basePoolFreeBytes `
-        -InfraVolumeBytes     $baseInfraBytes `
-        -ResiliencyFactor     $baseResFactor `
-        -ResiliencyName       $baseResName
+    $baseWfParams = @{
+        RawDiskBytes         = $baseRawBytes
+        NodeCount            = $baseNodeCount
+        LargestDiskSizeBytes = $baseLargestDrive
+        PoolTotalBytes       = $basePoolTotalBytes
+        PoolFreeBytes        = $basePoolFreeBytes
+        InfraVolumeBytes     = $baseInfraBytes
+        ResiliencyFactor     = $baseResFactor
+        ResiliencyName       = $baseResName
+    }
+    if ($baseResIsAssumed) { $baseWfParams['ResiliencyIsAssumed'] = $true }
+    $baselineWaterfall = Invoke-S2DWaterfallCalculation @baseWfParams
 
     # ── Apply scenario modifications ──────────────────────────────────────────
     $projNodeCount    = $baseNodeCount
@@ -200,10 +207,14 @@ function Invoke-S2DCapacityWhatIf {
         $projNodeCount += $AddNodes
         $scenarioParts += "+$AddNodes nodes"
     }
+    # AB#4642: when -ChangeResiliency is explicitly supplied it is a user-specified
+    # value (not assumed); otherwise the projected scenario inherits the baseline flag.
+    $projResIsAssumed = $baseResIsAssumed
     if ($ChangeResiliency -gt 0) {
-        $projResFactor = [double]$ChangeResiliency
-        $projResName   = "$ChangeResiliency-way mirror"
-        $scenarioParts += "Resiliency → $ChangeResiliency-way mirror"
+        $projResFactor    = [double]$ChangeResiliency
+        $projResName      = "$ChangeResiliency-way mirror"
+        $projResIsAssumed = $false
+        $scenarioParts   += "Resiliency → $ChangeResiliency-way mirror"
     }
 
     $scenarioLabel  = if ($scenarioParts) { $scenarioParts -join ', ' } else { 'No changes (baseline)' }
@@ -221,15 +232,18 @@ function Invoke-S2DCapacityWhatIf {
         $basePoolFreeBytes + ($projPoolTotalBytes - $basePoolTotalBytes)
     } else { $basePoolFreeBytes }
 
-    $projectedWaterfall = Invoke-S2DWaterfallCalculation `
-        -RawDiskBytes         $projRawBytes `
-        -NodeCount            $projNodeCount `
-        -LargestDiskSizeBytes $projDiskSize `
-        -PoolTotalBytes       $projPoolTotalBytes `
-        -PoolFreeBytes        $projPoolFreeBytes `
-        -InfraVolumeBytes     $baseInfraBytes `
-        -ResiliencyFactor     $projResFactor `
-        -ResiliencyName       $projResName
+    $projWfParams = @{
+        RawDiskBytes         = $projRawBytes
+        NodeCount            = $projNodeCount
+        LargestDiskSizeBytes = $projDiskSize
+        PoolTotalBytes       = $projPoolTotalBytes
+        PoolFreeBytes        = $projPoolFreeBytes
+        InfraVolumeBytes     = $baseInfraBytes
+        ResiliencyFactor     = $projResFactor
+        ResiliencyName       = $projResName
+    }
+    if ($projResIsAssumed) { $projWfParams['ResiliencyIsAssumed'] = $true }
+    $projectedWaterfall = Invoke-S2DWaterfallCalculation @projWfParams
 
     # ── Build delta table ─────────────────────────────────────────────────────
     $deltaStages = for ($i = 0; $i -lt $baselineWaterfall.Stages.Count; $i++) {
