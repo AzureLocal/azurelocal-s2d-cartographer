@@ -1,6 +1,6 @@
 @{
     RootModule           = 'S2DCartographer.psm1'
-    ModuleVersion        = '1.10.0'
+    ModuleVersion        = '1.10.1'
     CompatiblePSEditions = @('Core')
     GUID                 = 'c7f4a2d1-83e6-4b19-a05c-9d2e7f318c44'
     Author               = 'Azure Local Cloud'
@@ -8,9 +8,7 @@
     Copyright            = '(c) 2026 Hybrid Cloud Solutions. All rights reserved.'
     Description          = 'Storage Spaces Direct analysis, visualization, and reporting for Azure Local and Windows Server clusters. Inventories physical disks, storage pools, and volumes; computes capacity waterfalls with TiB/TB dual display; generates HTML dashboards, Word documents, PDFs, and Excel workbooks with publication-quality diagrams.'
     PowerShellVersion    = '7.2'
-    RequiredModules      = @(
-        @{ ModuleName = 'ImportExcel'; ModuleVersion = '7.0.0' }
-    )
+    RequiredModules      = @()
 
     FunctionsToExport    = @(
         'Connect-S2DCluster',

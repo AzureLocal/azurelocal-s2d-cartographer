@@ -12,7 +12,13 @@ function Export-S2DExcelReport {
     )
 
     if (-not (Get-Module -ListAvailable -Name ImportExcel -ErrorAction SilentlyContinue)) {
-        throw "The 'ImportExcel' module is required for Excel reports. Install it with: Install-Module ImportExcel -Scope CurrentUser"
+        Write-Verbose "ImportExcel not found — attempting to install from PSGallery..."
+        try {
+            Install-Module ImportExcel -Scope CurrentUser -Force -ErrorAction Stop
+        }
+        catch {
+            throw "Excel report format requires the ImportExcel module. Install it with: Install-Module ImportExcel -Scope CurrentUser`n(Auto-install failed: $_)"
+        }
     }
     Import-Module ImportExcel -ErrorAction Stop
     Add-Type -AssemblyName System.Drawing

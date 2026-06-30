@@ -11,6 +11,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ---
 
+## [1.10.1] — 2026-06-30
+
+### Fixed
+
+- **ImportExcel is now an optional runtime dependency.** Removed `ImportExcel` from the manifest
+  `RequiredModules` list so `Test-ModuleManifest` and `Import-Module` succeed in CI without
+  ImportExcel pre-installed. `Export-S2DExcelReport` loads ImportExcel on demand; other report
+  formats (HTML, Word, PDF, JSON) are completely unaffected.
+
+---
+
 ## [1.10.0] — 2026-06-30
 
 ### Added
