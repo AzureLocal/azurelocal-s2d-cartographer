@@ -96,7 +96,11 @@ function Get-S2DStoragePoolInfo {
             if ($session) { Get-S2DVirtualDiskData -CimSession $session }
             else          { Get-S2DVirtualDiskData }
         )
-        $provisionedBytes = [int64]($allVdisks | Measure-Object -Property Size -Sum).Sum
+        # Empty-data safeguard: Measure-Object -Sum on an empty collection returns $null
+        # for .Sum; explicitly coerce to [int64]0 to prevent downstream NullReferenceException.
+        $provisionedBytes = if ($allVdisks.Count -gt 0) {
+            [int64](($allVdisks | Measure-Object -Property Size -Sum).Sum)
+        } else { [int64]0 }
     }
 
     $totalBytes     = [int64]$rawPool.Size

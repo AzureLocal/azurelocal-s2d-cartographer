@@ -34,6 +34,9 @@ $Script:S2DSession = @{
     CollectedData  = @{}
 }
 
+# Concurrent collection guard — set by Invoke-S2DCartographer; prevents overlapping runs.
+$Script:S2DCollectionInProgress = $false
+
 Export-ModuleMember -Function @(
     # Connectivity
     'Connect-S2DCluster',

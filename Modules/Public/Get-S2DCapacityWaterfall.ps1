@@ -58,8 +58,22 @@ function Get-S2DCapacityWaterfall {
         })
     }
 
-    $rawDiskBytes      = [int64]($capacityDisks | Measure-Object -Property SizeBytes -Sum).Sum
-    $largestDriveBytes = [int64]($capacityDisks | Measure-Object -Property SizeBytes -Maximum).Maximum
+    # Empty-data safeguard: no capacity disks means the waterfall cannot be computed
+    # meaningfully. Return a zeroed waterfall with a warning rather than silently
+    # passing zeros through and producing a misleading "0.00 TiB usable" result.
+    if (-not $capacityDisks -or $capacityDisks.Count -eq 0) {
+        Write-Warning 'Get-S2DCapacityWaterfall: No pool-member capacity disks found. Returning a zeroed waterfall. Verify that physical disk data was collected and that pool-member disks are present.'
+        $emptyWaterfall = Invoke-S2DWaterfallCalculation `
+            -RawDiskBytes         ([int64]0) `
+            -NodeCount            ([math]::Max($nodeCount, 1)) `
+            -LargestDiskSizeBytes ([int64]0) `
+            -ResiliencyIsAssumed
+        $Script:S2DSession.CollectedData['CapacityWaterfall'] = $emptyWaterfall
+        return $emptyWaterfall
+    }
+
+    $rawDiskBytes      = [int64](($capacityDisks | Measure-Object -Property SizeBytes -Sum).Sum)
+    $largestDriveBytes = [int64](($capacityDisks | Measure-Object -Property SizeBytes -Maximum).Maximum)
     $poolTotalBytes    = if ($pool -and $pool.TotalSize) { $pool.TotalSize.Bytes } else { [int64]0 }
     $poolFreeBytes     = if ($pool -and $pool.RemainingSize) { $pool.RemainingSize.Bytes } else { [int64]0 }
 

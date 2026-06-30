@@ -151,6 +151,14 @@ function Invoke-S2DCartographer {
         New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
     }
 
+    # ── Concurrent collection guard ───────────────────────────────────────────
+    # Prevent two Invoke-S2DCartographer calls from running simultaneously and
+    # corrupting shared $Script:S2DSession / CollectedData state.
+    if ($Script:S2DCollectionInProgress) {
+        throw 'A collection is already in progress. Wait for the current Invoke-S2DCartographer run to complete before starting another.'
+    }
+    $Script:S2DCollectionInProgress = $true
+
     # ── Log helper (writes to file and verbose stream) ────────────────────────
     $logLines  = [System.Collections.Generic.List[string]]::new()
     $runStart  = Get-Date
@@ -324,6 +332,9 @@ function Invoke-S2DCartographer {
         throw
     }
     finally {
+        # Always release the concurrent guard, even on error, so subsequent runs succeed.
+        $Script:S2DCollectionInProgress = $false
+
         if ($ownedSession -and $Script:S2DSession.IsConnected) {
             Disconnect-S2DCluster
             Write-Log "Disconnected from cluster."

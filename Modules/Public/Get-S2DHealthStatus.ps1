@@ -95,27 +95,38 @@ function Get-S2DHealthStatus {
     # Treat missing IsPoolMember (pre-1.2.0 fixtures / older inputs) as pool member
     # so this filter is backward-compatible.
     $poolMemberDisks = @($physDisks | Where-Object { $_.IsPoolMember -ne $false })
-    $byNode = @($poolMemberDisks | Group-Object NodeName)
-    $diskSymmetryOk = $true
-    $symmetryDetail = ''
-    if ($byNode.Count -gt 1) {
-        $counts = $byNode | Select-Object Name, Count
-        $uniqueCounts = @($counts | Select-Object -ExpandProperty Count | Select-Object -Unique)
-        if ($uniqueCounts.Count -gt 1) {
-            $diskSymmetryOk = $false
-            $symmetryDetail = ($counts | ForEach-Object { "$($_.Name)=$($_.Count) pool disks" }) -join ', '
+
+    # Empty-data safeguard: when no pool-member disks are present, report as a warning
+    # rather than silently passing with a misleading "0 disks per node" pass message.
+    if ($poolMemberDisks.Count -eq 0) {
+        $checks += New-HealthCheck 'DiskSymmetry' 'Warning' 'Warn' `
+            'No pool-member disks found. Physical disk inventory may be empty or collection failed.' `
+            'Run Get-S2DPhysicalDiskInventory to verify disk collection. Confirm the cluster has active pool-member drives.'
+    }
+    else {
+        $byNode = @($poolMemberDisks | Group-Object NodeName)
+        $diskSymmetryOk = $true
+        $symmetryDetail = ''
+        if ($byNode.Count -gt 1) {
+            $counts = $byNode | Select-Object Name, Count
+            $uniqueCounts = @($counts | Select-Object -ExpandProperty Count | Select-Object -Unique)
+            if ($uniqueCounts.Count -gt 1) {
+                $diskSymmetryOk = $false
+                $symmetryDetail = ($counts | ForEach-Object { "$($_.Name)=$($_.Count) pool disks" }) -join ', '
+            }
         }
+        $disksPerNode = if ($byNode.Count -gt 0) { ($byNode | Select-Object -First 1).Count } else { 0 }
+        $check2 = if ($diskSymmetryOk) {
+            New-HealthCheck 'DiskSymmetry' 'Warning' 'Pass' `
+                "All nodes have a consistent pool-member disk count ($disksPerNode disks per node)." `
+                "No action required."
+        } else {
+            New-HealthCheck 'DiskSymmetry' 'Warning' 'Warn' `
+                "Pool-member disk count is inconsistent across nodes: $symmetryDetail" `
+                "Investigate missing or additional disks. S2D requires symmetric pool-member disk configurations across nodes."
+        }
+        $checks += $check2
     }
-    $check2 = if ($diskSymmetryOk) {
-        New-HealthCheck 'DiskSymmetry' 'Warning' 'Pass' `
-            "All nodes have a consistent pool-member disk count ($($byNode | Select-Object -First 1 -ExpandProperty Count) disks per node)." `
-            "No action required."
-    } else {
-        New-HealthCheck 'DiskSymmetry' 'Warning' 'Warn' `
-            "Pool-member disk count is inconsistent across nodes: $symmetryDetail" `
-            "Investigate missing or additional disks. S2D requires symmetric pool-member disk configurations across nodes."
-    }
-    $checks += $check2
 
     # ── Check 3: Volume health ────────────────────────────────────────────────
     $degradedVolumes = @($volumes | Where-Object {
@@ -238,11 +249,14 @@ function Get-S2DHealthStatus {
         # Rebuild capacity math is pool-only — non-pool disks are never rebuilt
         # into the S2D pool if their node fails.
         $nodeGroups = @($poolMemberDisks | Group-Object NodeName)
-        $largestNodeDiskBytes = [int64](
+        # Empty-data safeguard: Measure-Object -Maximum on an empty pipeline yields $null;
+        # explicitly default to 0 to prevent [int64]$null issues under StrictMode.
+        $largestNodeDiskBytesRaw = (
             $nodeGroups |
             ForEach-Object { ($_.Group | Measure-Object -Property SizeBytes -Sum).Sum } |
             Measure-Object -Maximum
         ).Maximum
+        $largestNodeDiskBytes = if ($null -ne $largestNodeDiskBytesRaw) { [int64]$largestNodeDiskBytesRaw } else { [int64]0 }
         # Sanity check: if NodeName grouping produced fewer groups than nodes, disk
         # NodeName assignment is unreliable (can happen when collection deduplicates
         # pool-member disks but StorageNode associations are unavailable). Fall back
