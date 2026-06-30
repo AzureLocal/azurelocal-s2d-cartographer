@@ -8,6 +8,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-06-30
+
+> **Wave 3 — Validation & report correctness.** Locks accuracy against regression and fixes the
+> PDF/Word report rendering defects, plus collection robustness on empty or contended clusters.
+
+### Added
+
+- **Cross-tool reconciliation keystone.** A byte-valued golden-cluster fixture
+  (`tests/maproom/Fixtures/golden-clusters.json`), identical to Surveyor's, drives a Pester suite
+  that runs the Cartographer engine and asserts reconciliation within the ±2% gate. 24 Pester cases
+  across 4 clusters. (AB#4633)
+- **Concurrent collection guard** — a module-scoped flag set at the start of
+  `Invoke-S2DCartographer` and released in a `finally`; a second concurrent collection throws a
+  clear terminating error instead of corrupting shared state. (AB#279)
+- **Empty-data safeguards** — `Get-S2DCapacityWaterfall`, `Get-S2DHealthStatus`, and
+  `Get-S2DStoragePoolInfo` now handle null/empty disk, pool, and volume data gracefully (warn +
+  zeroed result) rather than throwing on an empty cluster. (AB#279)
+
+### Fixed
+
+- PDF capacity-model **waterfall** bar graph now uses exact byte-derived TB values instead of a
+  truncated `1.0995` approximation. (AB#263)
+- PDF **pool allocation** reserve boundary line is positioned at `poolTotal − reserve` (start of the
+  reserve zone) instead of the reserve value, and the **pool health** bar's x-axis max now includes
+  every segment so healthy clusters no longer clip. (AB#264)
+- Word **executive summary** table given explicit column widths (35/65), fixed layout, and cell
+  padding so values like `22.44 TiB (24.65 TB)` are no longer cramped. (AB#265)
+- Word document **overall layout** — 1-inch margins, page-width tables with fixed layout, section-
+  header cell margins, and hand-tuned column widths for the wide disk/volume tables. (AB#266)
+
 ## [1.6.0] — 2026-06-29
 
 > **Wave 2 — Legibility.** Capacity figures are now unambiguous in unit and space. No capacity math
