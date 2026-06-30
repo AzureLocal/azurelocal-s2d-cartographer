@@ -1,0 +1,150 @@
+{
+  "version": "1.10.0",
+  "description": "S2DCartographer health-check definitions. Each check carries a weight (1-3) and named thresholds that map Status values to awarded points. Edit weights and thresholds to tune scoring without code changes. Hot-swap with Export-S2DHealthConfig / Import-S2DHealthConfig.",
+  "scoreThresholds": {
+    "excellent": 80,
+    "good": 60,
+    "fair": 40,
+    "needsImprovement": 0
+  },
+  "weighting": {
+    "description": "Pass awards full weight points. Warn awards weight * warnFactor. Fail awards 0.",
+    "warnFactor": 0.5
+  },
+  "checks": [
+    {
+      "id": "ReserveAdequacy",
+      "weight": 3,
+      "severity": "Critical",
+      "title": "Rebuild reserve adequacy",
+      "description": "Verifies that free pool space meets or exceeds the recommended per-drive rebuild reserve (min(NodeCount,4) x largest capacity drive). Rebuild reserve protects against data loss during a concurrent drive replacement.",
+      "thresholds": [
+        { "status": "Pass", "label": "Adequate",    "points": 3 },
+        { "status": "Warn", "label": "Low",          "points": 2 },
+        { "status": "Fail", "label": "Critical Low", "points": 0 }
+      ]
+    },
+    {
+      "id": "DiskSymmetry",
+      "weight": 2,
+      "severity": "Warning",
+      "title": "Pool-member disk symmetry",
+      "description": "Checks that all nodes contribute the same number of pool-member disks. Asymmetric disk counts can cause unbalanced erasure-coding stripes and reduce effective resiliency.",
+      "thresholds": [
+        { "status": "Pass", "label": "Symmetric",   "points": 2 },
+        { "status": "Warn", "label": "Asymmetric",  "points": 0 }
+      ]
+    },
+    {
+      "id": "VolumeHealth",
+      "weight": 3,
+      "severity": "Critical",
+      "title": "Volume health",
+      "description": "Checks that all virtual disks (volumes) are in Healthy / OK state. Degraded or detached volumes may be inaccessible to workloads.",
+      "thresholds": [
+        { "status": "Pass", "label": "All healthy", "points": 3 },
+        { "status": "Fail", "label": "Degraded",    "points": 0 }
+      ]
+    },
+    {
+      "id": "DiskHealth",
+      "weight": 3,
+      "severity": "Critical",
+      "title": "Physical disk health",
+      "description": "Checks that all pool-member physical disks report HealthStatus = Healthy. Failed or degraded disks consume the pool's built-in fault tolerance.",
+      "thresholds": [
+        { "status": "Pass", "label": "All healthy", "points": 3 },
+        { "status": "Fail", "label": "Degraded",    "points": 0 }
+      ]
+    },
+    {
+      "id": "NVMeWear",
+      "weight": 2,
+      "severity": "Warning",
+      "title": "NVMe drive wear",
+      "description": "Checks that no NVMe pool-member drive exceeds 80% wear (WearPercentage). Drives near end-of-rated-write-endurance should be proactively replaced.",
+      "thresholds": [
+        { "status": "Pass", "label": "All within limit", "points": 2 },
+        { "status": "Warn", "label": "High wear",        "points": 1 }
+      ]
+    },
+    {
+      "id": "ThinOvercommit",
+      "weight": 2,
+      "severity": "Warning",
+      "title": "Thin volume overcommit",
+      "description": "Checks whether the maximum potential pool footprint of all thin-provisioned volumes (if fully written) would exceed the pool total. An overcommitted pool can run out of space unexpectedly as thin volumes grow.",
+      "thresholds": [
+        { "status": "Pass", "label": "Within safe headroom", "points": 2 },
+        { "status": "Warn", "label": "Overcommit risk",      "points": 1 },
+        { "status": "Fail", "label": "Pool exhaustion risk",  "points": 0 }
+      ]
+    },
+    {
+      "id": "FirmwareConsistency",
+      "weight": 1,
+      "severity": "Info",
+      "title": "Firmware consistency",
+      "description": "Checks that all pool-member disks of the same model run the same firmware version. Mixed firmware can cause subtle behaviour differences and complicates vendor support cases.",
+      "thresholds": [
+        { "status": "Pass", "label": "Consistent",   "points": 1 },
+        { "status": "Warn", "label": "Mixed",         "points": 0 }
+      ]
+    },
+    {
+      "id": "RebuildCapacity",
+      "weight": 3,
+      "severity": "Critical",
+      "title": "Rebuild capacity",
+      "description": "Checks that free pool space is sufficient to absorb the loss of the largest node's worth of pool-member disks and fully rebuild all data. Insufficient free space means a node failure cannot be repaired.",
+      "thresholds": [
+        { "status": "Pass", "label": "Sufficient",    "points": 3 },
+        { "status": "Warn", "label": "Insufficient",  "points": 0 }
+      ]
+    },
+    {
+      "id": "InfrastructureVolume",
+      "weight": 1,
+      "severity": "Info",
+      "title": "Infrastructure volume",
+      "description": "Checks for the presence and health of the Azure Local infrastructure volume (used for cluster management plane, SBE agent, etc.). Missing or degraded on Azure Local clusters indicates a management-plane issue.",
+      "thresholds": [
+        { "status": "Pass", "label": "Present and healthy", "points": 1 },
+        { "status": "Warn", "label": "Missing or degraded", "points": 0 }
+      ]
+    },
+    {
+      "id": "CacheTierHealth",
+      "weight": 2,
+      "severity": "Warning",
+      "title": "Cache tier health",
+      "description": "Checks the state of the S2D cache tier. A degraded cache tier reduces write performance and increases latency. All-flash clusters with software write-back cache are evaluated separately.",
+      "thresholds": [
+        { "status": "Pass", "label": "Active",   "points": 2 },
+        { "status": "Warn", "label": "Degraded", "points": 0 }
+      ]
+    },
+    {
+      "id": "ThinReserveRisk",
+      "weight": 2,
+      "severity": "Warning",
+      "title": "Thin provisioning reserve risk",
+      "description": "Asks: if all thin volumes grew to their maximum provisioned size, would the rebuild reserve still be intact? Today's free pool space can look healthy while uncommitted thin growth silently threatens the reserve.",
+      "thresholds": [
+        { "status": "Pass", "label": "Reserve safe",      "points": 2 },
+        { "status": "Warn", "label": "Reserve at risk",   "points": 1 },
+        { "status": "Fail", "label": "Reserve exhausted", "points": 0 }
+      ]
+    },
+    {
+      "id": "MaintenanceReserveN1",
+      "weight": 1,
+      "severity": "Info",
+      "title": "Compute maintenance reserve (N+1 advisory)",
+      "description": "Informational advisory: N+1/N+2 is a COMPUTE resiliency target (reserve CPU + RAM so a node can be drained for maintenance or lost without dropping VMs). It is not a storage-pool reserve. This check is always Pass/Info — it never contributes a storage Warning or Fail.",
+      "thresholds": [
+        { "status": "Pass", "label": "Informational", "points": 1 }
+      ]
+    }
+  ]
+}

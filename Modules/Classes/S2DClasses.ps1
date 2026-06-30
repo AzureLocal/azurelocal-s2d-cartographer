@@ -51,11 +51,18 @@ class S2DCacheTier {
 }
 
 class S2DHealthCheck {
+    # Legacy fields — always populated for backward compatibility
     [string] $CheckName
     [string] $Severity
     [string] $Status
     [string] $Details
     [string] $Remediation
+    # Graduated scoring fields — added in v1.10.0 (#57)
+    [int]    $Weight          # Relative importance (1-3). Loaded from health-checks.json.
+    [int]    $MaxPoints       # Maximum points this check can award (= Weight).
+    [double] $AwardedPoints   # Points actually awarded: Pass=MaxPoints, Warn=MaxPoints*0.5, Fail=0.
+    [string] $ScoreBand       # Named band for this check: Excellent | Good | Fair | Needs Improvement
+    [double] $ScorePercent    # AwardedPoints / MaxPoints * 100 for this individual check.
 }
 
 class S2DWaterfallStage {

@@ -1,6 +1,6 @@
 @{
     RootModule           = 'S2DCartographer.psm1'
-    ModuleVersion        = '1.9.1'
+    ModuleVersion        = '1.10.0'
     CompatiblePSEditions = @('Core')
     GUID                 = 'c7f4a2d1-83e6-4b19-a05c-9d2e7f318c44'
     Author               = 'Azure Local Cloud'
@@ -25,7 +25,9 @@
         'Invoke-S2DCartographer',
         'Invoke-S2DCapacityWhatIf',
         'New-S2DReport',
-        'New-S2DDiagram'
+        'New-S2DDiagram',
+        'Export-S2DHealthConfig',
+        'Import-S2DHealthConfig'
     )
     CmdletsToExport      = @()
     VariablesToExport    = @()

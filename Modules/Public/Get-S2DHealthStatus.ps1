@@ -59,6 +59,8 @@ function Get-S2DHealthStatus {
         $hc.Status      = $Status
         $hc.Details     = $Details
         $hc.Remediation = $Remediation
+        # Apply graduated scoring from health-checks.json definition (#57/#58)
+        Invoke-S2DHealthCheckScoring -Check $hc | Out-Null
         $hc
     }
 
@@ -427,8 +429,12 @@ function Get-S2DHealthStatus {
         'Healthy'
     }
 
+    # ── Graduated score rollup (#57) ──────────────────────────────────────────
+    $scoreRollup = Invoke-S2DHealthScoreRollup -Checks $result -OverallHealth $overallHealth
+
     $Script:S2DSession.CollectedData['HealthChecks']   = $result
     $Script:S2DSession.CollectedData['OverallHealth']  = $overallHealth
+    $Script:S2DSession.CollectedData['HealthScore']    = $scoreRollup
 
     $result
 }

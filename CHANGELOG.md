@@ -8,6 +8,39 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.10.0] — 2026-06-30
+
+### Added
+
+- **Graduated health-check scoring engine (#57, AB#267).** `Get-S2DHealthStatus` now emits five
+  new fields on every `S2DHealthCheck` object alongside the existing `CheckName / Severity /
+  Status / Details / Remediation` fields: `Weight` (relative importance 1–3), `MaxPoints`,
+  `AwardedPoints` (Pass = full, Warn = partial, Fail = 0), `ScoreBand` (named band from the
+  threshold definition), and `ScorePercent` (0–100 for the individual check). A new
+  `CollectedData['HealthScore']` entry on the session carries the weighted roll-up:
+  `OverallScore` (0–100 integer), `ScoreStatus` (Excellent ≥ 80 / Good ≥ 60 / Fair ≥ 40 /
+  Needs Improvement < 40), `TotalAwarded`, `TotalMax`, and the legacy `OverallHealth` string.
+  All existing consumers of `OverallHealth`, `HealthChecks`, `CheckName`, `Severity`, `Status`,
+  `Details`, and `Remediation` are fully backward-compatible — no output fields were removed.
+  Mirrors the Ranger `Invoke-RangerWafRuleEvaluation` weighted/graduated pattern.
+
+- **Named calculation references via `config/health-checks.json` (#58, AB#268).** All 12 check
+  definitions (weights, thresholds, named bands, and descriptions) are now externalized into
+  `config/health-checks.json` shipped inside the module. The scoring engine (`Get-S2DHealthConfig`,
+  `Get-S2DCheckDefinition`, `Invoke-S2DHealthCheckScoring`, `Invoke-S2DHealthScoreRollup`) reads
+  definitions from this file and caches them on first use. Thresholds and weights can be edited in
+  the JSON without code changes; the format mirrors Ranger's `waf-rules.json` schema shape.
+
+- **Config hot-swap: `Export-S2DHealthConfig` and `Import-S2DHealthConfig` (#59, AB#269).**
+  `Export-S2DHealthConfig [-OutputPath <path>]` writes the active config (or the shipped default)
+  to a JSON file, returning a `FileInfo` object. `Import-S2DHealthConfig -Path <path>` validates
+  the schema (checks have `id`, `weight`, `title`, and at least one `threshold`) then activates
+  the config in-memory for the session — no module reinstall required. Use `-Validate` for a
+  dry-run schema check without activating. Use `-Default` to clear any active override and revert
+  to the shipped defaults. Both cmdlets are wired into `S2DCartographer.psd1` `FunctionsToExport`
+  and `S2DCartographer.psm1` `Export-ModuleMember`. Pattern mirrors Ranger's
+  `Export-RangerWafConfig` / `Import-RangerWafConfig` hot-swap design.
+
 ## [1.9.1] — 2026-06-30
 
 ### Changed

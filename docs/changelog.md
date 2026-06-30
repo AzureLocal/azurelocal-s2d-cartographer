@@ -11,6 +11,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ---
 
+## [1.10.0] — 2026-06-30
+
+### Added
+
+- **Graduated health-check scoring engine (#57, AB#267).** `Get-S2DHealthStatus` now adds
+  `Weight`, `MaxPoints`, `AwardedPoints`, `ScoreBand`, and `ScorePercent` to every
+  `S2DHealthCheck`. A `CollectedData['HealthScore']` rollup carries the weighted
+  `OverallScore` (0–100), `ScoreStatus` (Excellent/Good/Fair/Needs Improvement),
+  `TotalAwarded`, `TotalMax`, and the legacy `OverallHealth` string. All existing output
+  fields are unchanged — fully backward-compatible.
+
+- **Named calculation references via `config/health-checks.json` (#58, AB#268).** All 12
+  check definitions (weights, thresholds, named bands) externalized to a JSON config file
+  shipped with the module. Thresholds and weights are editable without code changes.
+  Mirrors Ranger's `waf-rules.json` schema shape.
+
+- **`Export-S2DHealthConfig` and `Import-S2DHealthConfig` (#59, AB#269).** Export writes
+  the active config to JSON; Import validates and activates an override for the session.
+  Use `-Validate` for a dry-run schema check; use `-Default` to reset to shipped defaults.
+  Mirrors Ranger's `Export-RangerWafConfig` / `Import-RangerWafConfig` hot-swap pattern.
+
+---
+
 ## [1.9.0] — 2026-06-30
 
 ### Added
