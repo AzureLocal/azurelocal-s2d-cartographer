@@ -172,6 +172,24 @@ Describe 'Empty-Data Safeguards' {
                     CacheTier     = $null
                 }
             }
+
+            # Mock every Windows-only Storage/Cluster cmdlet shim at the Describe level
+            # so ALL "(c)" empty-data contexts run hermetically on Linux.
+            #
+            # When CollectedData entries are empty/null the public cmdlets fall through to
+            # live collection: Get-S2DPhysicalDiskInventory -> Get-S2DPhysicalDiskData
+            # (Get-PhysicalDisk), Get-S2DStoragePoolInfo -> Get-S2DStoragePoolData
+            # (Get-StoragePool), Get-S2DVolumeMap -> Get-S2DVirtualDiskData (Get-VirtualDisk),
+            # Get-S2DCacheTierInfo -> Get-S2DPhysicalDiskData / Get-S2DClusterS2DData.
+            # None of these cmdlets exist on Linux — mock their private shims to return
+            # empty data so the safeguard branches (zeroed waterfall, DiskSymmetry=Warn, etc.)
+            # are exercised, not masked.
+            Mock Resolve-S2DSession      { return $null } -ModuleName S2DCartographer
+            Mock Get-S2DPhysicalDiskData { return @()  } -ModuleName S2DCartographer
+            Mock Get-S2DDiskData         { return @()  } -ModuleName S2DCartographer
+            Mock Get-S2DStoragePoolData  { return $null } -ModuleName S2DCartographer
+            Mock Get-S2DVirtualDiskData  { return @()  } -ModuleName S2DCartographer
+            Mock Get-S2DClusterS2DData   { return $null } -ModuleName S2DCartographer
         }
     }
 
