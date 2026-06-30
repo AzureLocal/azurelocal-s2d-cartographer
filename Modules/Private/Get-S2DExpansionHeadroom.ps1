@@ -37,7 +37,11 @@ function Get-S2DExpansionHeadroom {
 
     .OUTPUTS
         PSCustomObject with CurrentUtilizationPct, PrevalentDataCopies,
-        AvailableForVolumesBytes, UsedFootprintBytes, and a Thresholds array.
+        AvailableForVolumesBytes, UsedFootprintBytes, HasThinVolumes, and a
+        Thresholds array. Each threshold row includes SizeToEnterTiB — the
+        value to type into New-Volume -Size or WAC (PowerShell/WAC read size
+        suffixes as binary, so 1 TB = 1 TiB; value is floor-rounded to 2
+        decimals so the new volume always fits).
     #>
     [CmdletBinding()]
     param(
@@ -59,6 +63,12 @@ function Get-S2DExpansionHeadroom {
 
     # Non-infrastructure volumes only
     $workloadVols = @($Volumes | Where-Object { -not $_.IsInfrastructureVolume })
+
+    # Thin provisioning presence flag — used by report renderers for Part A:
+    # the 70% amber warning is only shown when thin volumes are present.
+    # When all volumes are fixed, 70% is rendered as advisory/neutral.
+    # Null-safe: -eq against $null returns $false, so missing ProvisioningType defaults to non-thin.
+    $hasThinVolumes = [bool]($workloadVols | Where-Object { $_.ProvisioningType -eq 'Thin' })
 
     # U = sum of footprint bytes for non-infra volumes
     $usedBytes = [int64](
@@ -93,11 +103,22 @@ function Get-S2DExpansionHeadroom {
         } else { [int64]0 }
         $isPast                = ($usedBytes -gt $budgetBytes)
 
+        # SizeToEnterTiB: the exact number to type into New-Volume -Size or WAC.
+        # PowerShell and WAC parse size suffixes as binary (1 TB = 1 TiB), so
+        # this equals NewUsableData.TiB, floor-rounded to 2 decimals so the new
+        # volume always fits. Past-line rows set to 0.
+        $sizeToEnterTiB = if ($isPast) {
+            [double]0
+        } else {
+            [Math]::Floor(($remainingUsable / 1099511627776.0) * 100) / 100
+        }
+
         [PSCustomObject]@{
             FillTargetPct               = $pct
             FootprintBudget             = [S2DCapacity]::new($budgetBytes)
             RemainingFootprint          = [S2DCapacity]::new($remainingFootprint)
             NewUsableData               = [S2DCapacity]::new($remainingUsable)
+            SizeToEnterTiB              = $sizeToEnterTiB
             IsPastLine                  = $isPast
             IsRecommendedPlanningLine   = ($pct -eq 70)
         }
@@ -109,6 +130,7 @@ function Get-S2DExpansionHeadroom {
         PrevalentCopiesNote       = "Assumed for new-volume estimates. Actual resiliency can differ."
         AvailableForVolumesBytes  = $availBytes
         UsedFootprintBytes        = $usedBytes
+        HasThinVolumes            = $hasThinVolumes
         Thresholds                = @($thresholds)
     }
 }

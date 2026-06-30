@@ -411,54 +411,69 @@ $($drows -join '')
     $body += Spacer
     $eh = $ClusterData.ExpansionHeadroom
     if ($eh) {
-        $body += Para "Current utilization: $($eh.CurrentUtilizationPct)% of Available-for-Volumes (footprint basis). New-volume usable data assumes $($eh.PrevalentDataCopies) data copies (prevailing resiliency — assumed for estimates)." `
-            -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 120
+        # Part A: provisioning-aware 70% note.
+        $ehThinNote = if ($eh.HasThinVolumes) {
+            '70% is the recommended planning line — thin volumes are present; a full pool takes thin volumes offline.'
+        } else {
+            '70% is a recommended operational headroom guideline — mainly relevant for thin-provisioned volumes, where a full pool takes thin volumes offline. Not a Microsoft hard limit. The firm storage limits are footprints fitting the pool and the rebuild reserve staying intact. All volumes are fixed — footprint is committed up front.'
+        }
+        $body += Para "Current utilization: $($eh.CurrentUtilizationPct)% of Available-for-Volumes (footprint basis). New-volume usable data assumes $($eh.PrevalentDataCopies) data copies (prevailing resiliency — assumed for estimates). $ehThinNote" `
+            -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 80
+        $body += Para 'Size to enter is the value to type into New-Volume -Size or WAC. PowerShell and WAC read size suffixes as binary (1 TB = 1 TiB), so this equals the TiB column, rounded down so the new volume always fits.' `
+            -sz 18 -color '605E5C' -spaceBefore 20 -spaceAfter 80
         $ehRows = $eh.Thresholds | ForEach-Object {
-            $planNote = if ($_.IsRecommendedPlanningLine) { ' [Planning line]' } else { '' }
+            $planNote = if ($_.IsRecommendedPlanningLine) {
+                if ($eh.HasThinVolumes) { ' [Planning line]' } else { ' [Advisory]' }
+            } else { '' }
             $pastNote = if ($_.IsPastLine) { ' [PAST]' } else { '' }
+            # Part B: SizeToEnterTiB — null-safe for JSON snapshots that predate this property.
+            $stePropW = $_.PSObject.Properties['SizeToEnterTiB']
+            $steVal = if ($_.IsPastLine) {
+                [string][char]0x2014  # em dash
+            } elseif ($null -ne $stePropW) {
+                "$($stePropW.Value)TB"
+            } else {
+                "$([Math]::Floor($_.NewUsableData.TiB * 100) / 100)TB"
+            }
             [PSCustomObject]@{
                 FillTarget        = "$($_.FillTargetPct)%$planNote$pastNote"
                 FootprintBudget   = "$($_.FootprintBudget.TB) TB / $($_.FootprintBudget.TiB) TiB"
                 RemainingFP       = "$($_.RemainingFootprint.TB) TB / $($_.RemainingFootprint.TiB) TiB"
                 NewUsableData     = "$($_.NewUsableData.TB) TB / $($_.NewUsableData.TiB) TiB"
+                SizeToEnter       = $steVal
             }
         }
-        # 4 columns: FillTarget=900 FootprintBudget=2820 RemainingFP=2820 NewUsableData=2820 (total=9360)
+        # 5 columns: FillTarget=780 FootprintBudget=2280 RemainingFP=2280 NewUsableData=2280 SizeToEnter=1740 (total=9360)
         $body += DataTable `
-            -headers @('Fill Target', 'Footprint Budget', 'Remaining Footprint', 'New Usable Data') `
+            -headers @('Fill Target', 'Footprint Budget', 'Remaining Footprint', 'New Usable Data', "Size to enter`nNew-Volume / WAC") `
             -rows $ehRows `
-            -props @('FillTarget', 'FootprintBudget', 'RemainingFP', 'NewUsableData') `
-            -colWidths @(900, 2820, 2820, 2820)
+            -props @('FillTarget', 'FootprintBudget', 'RemainingFP', 'NewUsableData', 'SizeToEnter') `
+            -colWidths @(780, 2280, 2280, 2280, 1740)
     } else {
         $body += Para 'Expansion headroom data not available (waterfall required).' -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 60
     }
     $body += PageBreak
 
-    # Maintenance Reserve Assessment
+    # Compute Maintenance Reserve Context — INFORMATIONAL ONLY
     # DEFENSIVE: every property access is guarded — null assessment skips the section.
+    # N+1/N+2 is a COMPUTE resiliency target, not a storage-pool reserve.
     $mraData = $ClusterData.MaintenanceReserveAssessment
     if ($null -ne $mraData -and $mraData.Status -ne 'Unknown') {
         $mraTargetLabel = if ($mraData.Target) { [string]$mraData.Target } else { 'N+1' }
-        $body += SectionHeader "Maintenance Reserve ($mraTargetLabel)"
+        $body += SectionHeader "Compute Maintenance Reserve Context ($mraTargetLabel) — Advisory"
         $body += Spacer
-        $mraStatusText = if ($null -ne $mraData.Meets -and $mraData.Meets) { 'Meets' } else { 'Does not meet' }
-        $mraKpiStatus  = if ($null -ne $mraData.Meets -and $mraData.Meets) { 'Pass' } else { 'Warn' }
-        $mraReqVal     = if ($mraData.RequiredCapacity)  { "$([math]::Round($mraData.RequiredCapacity.TB,  2)) TB / $([math]::Round($mraData.RequiredCapacity.TiB,  2)) TiB" }  else { 'N/A' }
-        $mraAvVal      = if ($mraData.AvailableHeadroom) { "$([math]::Round($mraData.AvailableHeadroom.TB, 2)) TB / $([math]::Round($mraData.AvailableHeadroom.TiB, 2)) TiB" } else { 'N/A' }
+        $mraNodeVal = if ($mraData.LargestNodeCapacity) {
+            "$([math]::Round($mraData.LargestNodeCapacity.TB, 2)) TB / $([math]::Round($mraData.LargestNodeCapacity.TiB, 2)) TiB"
+        } else { 'N/A' }
         $body += KpiTable @(
-            @{ label = "$mraTargetLabel Status"; value = $mraStatusText; status = $mraKpiStatus }
-            @{ label = 'Required Capacity';      value = $mraReqVal;     status = 'neutral' }
-            @{ label = 'Available Headroom';     value = $mraAvVal;      status = 'neutral' }
+            @{ label = 'Largest node raw storage'; value = $mraNodeVal;     status = 'neutral' }
+            @{ label = "$mraTargetLabel context";  value = 'Advisory only'; status = 'neutral' }
         )
         $body += Spacer
-        $body += Para 'Microsoft WAF recommends holding at least one node''s worth of raw capacity beyond the rebuild reserve so that a node can be fully drained for patching without exhausting pool free space. This is advisory — separate from and additive to the rebuild reserve.' `
+        $body += Para 'N+1/N+2 is a COMPUTE resiliency target — reserve one or two nodes'' worth of CPU + RAM so a node can be drained for updates or lost without dropping VMs. Microsoft WAF scopes this to compute and lists it separately from storage. It is not a storage-pool reserve. The firm storage reserves are the per-drive rebuild reserve and keeping volume footprints within the pool.' `
             -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 80
         if ($mraData.Note) {
             $body += Para ([string]$mraData.Note) -sz 20 -color '605E5C' -spaceBefore 20 -spaceAfter 60
-        }
-        if (-not ($null -ne $mraData.Meets -and $mraData.Meets)) {
-            $body += Para 'Remediation: Free pool space by shrinking or removing volumes, or add capacity drives to increase available headroom.' `
-                -sz 20 -bold $true -color '835B00' -spaceBefore 40 -spaceAfter 60
         }
         $body += PageBreak
     }

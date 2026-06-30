@@ -366,11 +366,14 @@ function Get-S2DHealthStatus {
     }
     $checks += $check11
 
-    # ── Check 12: Maintenance reserve (N+1) ──────────────────────────────────
-    # Surfaces the MaintenanceReserveAssessment already computed on the session,
-    # or runs a fresh assessment if not available. Severity 'Info' when Meets,
-    # 'Warning' when Does not meet. This is advisory — WAF best practice, not
-    # a hard S2D requirement.
+    # ── Check 12: Compute maintenance reserve note (N+1) — INFORMATIONAL ONLY ──
+    # N+1/N+2 is a COMPUTE resiliency target (CPU + RAM headroom to drain a node
+    # for updates or survive a node loss without dropping VMs). It is NOT a
+    # storage-pool reserve. Microsoft WAF scopes it to compute and lists it
+    # separately from storage. Cartographer has no VM compute-allocation data and
+    # cannot perform a real drain assessment. This check is always severity 'Info'
+    # and status 'Pass' — it NEVER contributes a storage Warning or Fail to the
+    # health roll-up. Storage reserve adequacy is governed by Check 1 only.
     $mra = $Script:S2DSession.CollectedData['MaintenanceReserveAssessment']
     $check12 = if (-not $mra) {
         # Assessment not pre-computed — try to compute it now from available data
@@ -378,7 +381,7 @@ function Get-S2DHealthStatus {
         $mraPoolFree   = if ($pool -and $pool.RemainingSize)  { [int64]$pool.RemainingSize.Bytes }  else { [int64]0 }
         $mraReserveRcd = if ($waterfall -and $waterfall.ReserveRecommended) { [int64]$waterfall.ReserveRecommended.Bytes } else { [int64]0 }
 
-        if ($mraPhysDisks.Count -gt 0 -and $mraPoolFree -gt 0) {
+        if ($mraPhysDisks.Count -gt 0) {
             $mra = Get-S2DMaintenanceReserveAssessment `
                 -PoolFreeBytes                 $mraPoolFree `
                 -RebuildReserveRecommendedBytes $mraReserveRcd `
@@ -388,26 +391,20 @@ function Get-S2DHealthStatus {
         }
 
         if ($mra -and $mra.Status -ne 'Unknown') {
-            $mraStatus = if ($mra.Meets) { 'Pass' } else { 'Warn' }
-            $mraSeverity = if ($mra.Meets) { 'Info' } else { 'Warning' }
-            $mraReqTB  = if ($mra.RequiredCapacity)  { "$([math]::Round($mra.RequiredCapacity.TB,  2)) TB / $([math]::Round($mra.RequiredCapacity.TiB,  2)) TiB" }  else { 'N/A' }
-            $mraAvTB   = if ($mra.AvailableHeadroom) { "$([math]::Round($mra.AvailableHeadroom.TB, 2)) TB / $([math]::Round($mra.AvailableHeadroom.TiB, 2)) TiB" } else { 'N/A' }
-            New-HealthCheck 'MaintenanceReserveN1' $mraSeverity $mraStatus `
-                "Maintenance reserve ($($mra.Target)): $($mra.Status). Required: $mraReqTB. Available headroom (free after rebuild reserve): $mraAvTB." `
-                $(if ($mra.Meets) { 'No action required. Cluster has sufficient headroom to drain a node for maintenance.' } else { 'Free pool space after rebuild reserve is insufficient to maintain N+1 maintenance headroom. Consider shrinking volumes, removing snapshots, or adding capacity drives.' })
+            $mraNodeTB = if ($mra.LargestNodeCapacity) { "$([math]::Round($mra.LargestNodeCapacity.TB, 2)) TB" } else { 'N/A' }
+            New-HealthCheck 'MaintenanceReserveN1' 'Info' 'Pass' `
+                "Compute maintenance reserve context ($($mra.Target)): largest node holds approximately $mraNodeTB of raw storage. N+1/N+2 is a compute target (CPU + RAM for node drain/loss) — not a storage requirement. See note for details." `
+                'N+1/N+2 compute resiliency is planned at the compute layer. Verify CPU and RAM headroom separately. Storage reserve adequacy is assessed by the ReserveAdequacy check.'
         } else {
             New-HealthCheck 'MaintenanceReserveN1' 'Info' 'Pass' `
-                "Maintenance reserve assessment skipped — insufficient data (no pool-member capacity disks or pool free space unavailable)." `
-                "Run Get-S2DPhysicalDiskInventory and Get-S2DCapacityWaterfall first."
+                "Compute maintenance reserve context: insufficient disk data to determine largest-node capacity. N+1/N+2 is a compute target, not a storage requirement." `
+                "Run Get-S2DPhysicalDiskInventory to surface largest-node capacity context."
         }
     } else {
-        $mraStatus = if ($mra.Meets) { 'Pass' } else { 'Warn' }
-        $mraSeverity = if ($mra.Meets) { 'Info' } else { 'Warning' }
-        $mraReqTB  = if ($mra.RequiredCapacity)  { "$([math]::Round($mra.RequiredCapacity.TB,  2)) TB / $([math]::Round($mra.RequiredCapacity.TiB,  2)) TiB" }  else { 'N/A' }
-        $mraAvTB   = if ($mra.AvailableHeadroom) { "$([math]::Round($mra.AvailableHeadroom.TB, 2)) TB / $([math]::Round($mra.AvailableHeadroom.TiB, 2)) TiB" } else { 'N/A' }
-        New-HealthCheck 'MaintenanceReserveN1' $mraSeverity $mraStatus `
-            "Maintenance reserve ($($mra.Target)): $($mra.Status). Required: $mraReqTB. Available headroom (free after rebuild reserve): $mraAvTB." `
-            $(if ($mra.Meets) { 'No action required. Cluster has sufficient headroom to drain a node for maintenance.' } else { 'Free pool space after rebuild reserve is insufficient to maintain N+1 maintenance headroom. Consider shrinking volumes, removing snapshots, or adding capacity drives.' })
+        $mraNodeTB = if ($mra.LargestNodeCapacity) { "$([math]::Round($mra.LargestNodeCapacity.TB, 2)) TB" } else { 'N/A' }
+        New-HealthCheck 'MaintenanceReserveN1' 'Info' 'Pass' `
+            "Compute maintenance reserve context ($($mra.Target)): largest node holds approximately $mraNodeTB of raw storage. N+1/N+2 is a compute target (CPU + RAM for node drain/loss) — not a storage requirement. See note for details." `
+            'N+1/N+2 compute resiliency is planned at the compute layer. Verify CPU and RAM headroom separately. Storage reserve adequacy is assessed by the ReserveAdequacy check.'
     }
     $checks += $check12
 

@@ -365,6 +365,44 @@ Describe 'Get-S2DHealthStatus' {
         }
     }
 
+    Context 'MaintenanceReserveN1 check — compute advisory (WAF re-frame, v1.9.0)' {
+        It 'MaintenanceReserveN1 status is always Pass regardless of pool free space' {
+            InModuleScope S2DCartographer {
+                $result = Get-S2DHealthStatus
+                ($result | Where-Object CheckName -eq 'MaintenanceReserveN1').Status | Should -Be 'Pass'
+            }
+        }
+
+        It 'MaintenanceReserveN1 severity is always Info (never Warning or Critical)' {
+            InModuleScope S2DCartographer {
+                $result = Get-S2DHealthStatus
+                ($result | Where-Object CheckName -eq 'MaintenanceReserveN1').Severity | Should -Be 'Info'
+            }
+        }
+
+        It 'MaintenanceReserveN1 check itself is always Pass and Info even when pool is tight' {
+            InModuleScope S2DCartographer {
+                # Simulate very low pool free space — this may trigger ReserveAdequacy Warning (Check 1),
+                # but Check 12 (MaintenanceReserveN1) must always be Pass/Info regardless.
+                $Script:S2DSession.CollectedData['StoragePool'].RemainingSize = [S2DCapacity]::new([int64]1000000000000)
+                $results = Get-S2DHealthStatus
+                $mraCheck = $results | Where-Object CheckName -eq 'MaintenanceReserveN1'
+                $mraCheck.Status   | Should -Be 'Pass'
+                $mraCheck.Severity | Should -Be 'Info'
+                # Confirm the Warning (if any) comes only from ReserveAdequacy, not MaintenanceReserveN1
+                $nonPassMra = $results | Where-Object { $_.CheckName -eq 'MaintenanceReserveN1' -and $_.Status -ne 'Pass' }
+                $nonPassMra.Count | Should -Be 0
+            }
+        }
+
+        It 'MaintenanceReserveN1 does not contribute Critical to OverallHealth' {
+            InModuleScope S2DCartographer {
+                $result = Get-S2DHealthStatus
+                ($result | Where-Object CheckName -eq 'MaintenanceReserveN1').Severity | Should -Not -Be 'Critical'
+            }
+        }
+    }
+
     Context 'FirmwareConsistency check' {
         It 'warns when drives of the same model have different firmware versions' {
             InModuleScope S2DCartographer {

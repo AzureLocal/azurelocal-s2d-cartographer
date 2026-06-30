@@ -1,23 +1,22 @@
 #Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 <#
 .SYNOPSIS
-    Unit tests for Get-S2DMaintenanceReserveAssessment (AB#maintenancereserve).
+    Unit tests for Get-S2DMaintenanceReserveAssessment (v1.9.0 re-frame).
 
 .DESCRIPTION
-    Validates the N+1/N+2 maintenance-reserve compliance assessment against
-    synthetic fixtures derived from the POC golden cluster:
+    Validates the N+1/N+2 compute-resiliency context note against synthetic fixtures
+    derived from the POC golden cluster:
       - 2 nodes, 4 x 3.84 TB NVMe each
       - nodeRawBytes (largest node) = 4 x 3,840,000,000,000 = 15,360,000,000,000 bytes
+
+    FRAMING: N+1/N+2 is a COMPUTE resiliency target (CPU + RAM headroom for node drain
+    or loss) — NOT a storage-pool reserve. The function now returns Status='Info' (never
+    a storage pass/fail). It surfaces the largest-node raw capacity as context only.
+    Meets is always $null. AvailableHeadroom is always $null.
 
     All S2DCapacity construction is inside InModuleScope (S2DCapacity is module-private).
     Storage collection shims are mocked at the Describe level — Linux CI safe.
     Uses [System.IO.Path]::GetTempPath() for any temp paths (cross-platform).
-
-    Math:
-      nodeRawBytes  = 4 x 3,840,000,000,000 = 15,360,000,000,000
-      reserve       = 3,840,000,000,000 (1 drive)
-      poolFreeMeets = 20,000,000,000,000  → headroom = 16,160,000,000,000 > 15,360,000,000,000 → Meets
-      poolFreeNoMt  = 5,000,000,000,000   → headroom =  1,160,000,000,000 < 15,360,000,000,000 → Does not meet
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -32,8 +31,8 @@ BeforeAll {
     $script:NodeCount       = 2
     $script:NodeRawBytes    = [int64]($script:DisksPerNode * $script:DiskSizeBytes)  # 15,360,000,000,000
     $script:ReserveBytes    = [int64]3840000000000   # 3.84 TB (1 drive)
-    $script:PoolFreeMeets   = [int64]20000000000000  # 20 TB  → headroom 16.16 TB > 15.36 TB
-    $script:PoolFreeNoMeet  = [int64]5000000000000   # 5 TB   → headroom 1.16 TB < 15.36 TB
+    $script:PoolFreeMeets   = [int64]20000000000000  # 20 TB (retained for API compat)
+    $script:PoolFreeNoMeet  = [int64]5000000000000   # 5 TB  (retained for API compat)
 
     # Build POC capacity-disk array (2 nodes x 4 disks each) at script scope
     $script:PocDisks = @(
@@ -51,12 +50,10 @@ BeforeAll {
     )
 }
 
-# ── Describe 1: N+1 Meets case ────────────────────────────────────────────────
-Describe 'Get-S2DMaintenanceReserveAssessment — N+1 Meets (POC golden)' {
+# ── Describe 1: N+1 informational result ─────────────────────────────────────
+Describe 'Get-S2DMaintenanceReserveAssessment — N+1 informational context (POC golden)' {
 
     BeforeAll {
-        # All computation must run inside InModuleScope because S2DCapacity is defined there.
-        # Pass every outer variable via -Parameters so InModuleScope can see it.
         $script:result1 = InModuleScope S2DCartographer -Parameters @{
             PoolFree  = $script:PoolFreeMeets
             Reserve   = $script:ReserveBytes
@@ -81,33 +78,40 @@ Describe 'Get-S2DMaintenanceReserveAssessment — N+1 Meets (POC golden)' {
         $script:result1.Target | Should -Be 'N+1'
     }
 
-    It 'Status is Meets' {
-        $script:result1.Status | Should -Be 'Meets'
+    It 'Status is Info (not a storage pass/fail)' {
+        $script:result1.Status | Should -Be 'Info'
     }
 
-    It 'Meets is $true' {
-        $script:result1.Meets | Should -BeTrue
+    It 'Meets is $null (not a storage compliance verdict)' {
+        $script:result1.Meets | Should -BeNullOrEmpty
     }
 
-    It 'RequiredCapacity.Bytes equals one node raw bytes (15,360,000,000,000)' {
+    It 'AvailableHeadroom is $null (not a storage measurement)' {
+        $script:result1.AvailableHeadroom | Should -BeNullOrEmpty
+    }
+
+    It 'LargestNodeCapacity.Bytes equals one node raw bytes (15,360,000,000,000)' {
+        $script:result1.LargestNodeCapacity.Bytes | Should -Be ([int64]15360000000000)
+    }
+
+    It 'LargestNodeCapacity is an S2DCapacity object' {
+        $script:result1.LargestNodeCapacity.GetType().Name | Should -Be 'S2DCapacity'
+    }
+
+    It 'ContextCapacity.Bytes equals 1x node raw bytes (N+1 multiplier)' {
+        $script:result1.ContextCapacity.Bytes | Should -Be ([int64]15360000000000)
+    }
+
+    It 'RequiredCapacity retained for JSON schema compat and equals ContextCapacity' {
         $script:result1.RequiredCapacity.Bytes | Should -Be ([int64]15360000000000)
-    }
-
-    It 'RequiredCapacity is an S2DCapacity object' {
-        $script:result1.RequiredCapacity.GetType().Name | Should -Be 'S2DCapacity'
-    }
-
-    It 'AvailableHeadroom.Bytes equals poolFree - reserve (16,160,000,000,000)' {
-        # 20,000,000,000,000 - 3,840,000,000,000 = 16,160,000,000,000
-        $script:result1.AvailableHeadroom.Bytes | Should -Be ([int64]16160000000000)
-    }
-
-    It 'AvailableHeadroom is an S2DCapacity object' {
-        $script:result1.AvailableHeadroom.GetType().Name | Should -Be 'S2DCapacity'
     }
 
     It 'Note is non-empty' {
         $script:result1.Note | Should -Not -BeNullOrEmpty
+    }
+
+    It 'Note mentions COMPUTE (not a storage requirement)' {
+        $script:result1.Note | Should -Match '(?i)COMPUTE'
     }
 
     It 'Note contains two-node informational text for 2-node cluster' {
@@ -115,8 +119,8 @@ Describe 'Get-S2DMaintenanceReserveAssessment — N+1 Meets (POC golden)' {
     }
 }
 
-# ── Describe 2: N+1 Does-not-meet case ───────────────────────────────────────
-Describe 'Get-S2DMaintenanceReserveAssessment — N+1 Does not meet (insufficient headroom)' {
+# ── Describe 2: N+1 with lower pool free — still Info (no storage fail) ──────
+Describe 'Get-S2DMaintenanceReserveAssessment — N+1 with low pool free is still Info (no storage verdict)' {
 
     BeforeAll {
         $script:result2 = InModuleScope S2DCartographer -Parameters @{
@@ -139,31 +143,21 @@ Describe 'Get-S2DMaintenanceReserveAssessment — N+1 Does not meet (insufficien
         $script:result2 | Should -Not -BeNullOrEmpty
     }
 
-    It 'Meets is $false' {
-        $script:result2.Meets | Should -BeFalse
+    It 'Status is Info regardless of pool free space (not a storage verdict)' {
+        $script:result2.Status | Should -Be 'Info'
     }
 
-    It 'Status is "Does not meet"' {
-        $script:result2.Status | Should -Be 'Does not meet'
+    It 'Meets is $null (compute context only)' {
+        $script:result2.Meets | Should -BeNullOrEmpty
     }
 
-    It 'RequiredCapacity.Bytes equals one node raw bytes (15,360,000,000,000)' {
-        $script:result2.RequiredCapacity.Bytes | Should -Be ([int64]15360000000000)
+    It 'LargestNodeCapacity.Bytes still equals one node raw bytes (15,360,000,000,000)' {
+        $script:result2.LargestNodeCapacity.Bytes | Should -Be ([int64]15360000000000)
     }
 
-    It 'AvailableHeadroom.Bytes equals 1,160,000,000,000 (5TB - 3.84TB)' {
-        # 5,000,000,000,000 - 3,840,000,000,000 = 1,160,000,000,000
-        $script:result2.AvailableHeadroom.Bytes | Should -Be ([int64]1160000000000)
-    }
-
-    It 'RequiredCapacity.TB is approx 15.36 (+/-0.01)' {
-        $script:result2.RequiredCapacity.TB | Should -BeGreaterThan 15.35
-        $script:result2.RequiredCapacity.TB | Should -BeLessThan    15.37
-    }
-
-    It 'AvailableHeadroom.TB is approx 1.16 (+/-0.01)' {
-        $script:result2.AvailableHeadroom.TB | Should -BeGreaterThan 1.15
-        $script:result2.AvailableHeadroom.TB | Should -BeLessThan    1.17
+    It 'LargestNodeCapacity.TB is approx 15.36 (+/-0.01)' {
+        $script:result2.LargestNodeCapacity.TB | Should -BeGreaterThan 15.35
+        $script:result2.LargestNodeCapacity.TB | Should -BeLessThan    15.37
     }
 }
 
@@ -195,16 +189,12 @@ Describe 'Get-S2DMaintenanceReserveAssessment — Target=None skips assessment' 
         $script:result3.Target | Should -Be 'None'
     }
 
-    It 'Meets is $true (None always passes)' {
-        $script:result3.Meets | Should -BeTrue
+    It 'Status is Info when Target=None' {
+        $script:result3.Status | Should -Be 'Info'
     }
 
-    It 'Status is Meets' {
-        $script:result3.Status | Should -Be 'Meets'
-    }
-
-    It 'RequiredCapacity.Bytes is 0' {
-        $script:result3.RequiredCapacity.Bytes | Should -Be 0
+    It 'Meets is $null (no storage verdict even for None target)' {
+        $script:result3.Meets | Should -BeNullOrEmpty
     }
 
     It 'Note mentions disabled/Target=None' {
@@ -212,8 +202,8 @@ Describe 'Get-S2DMaintenanceReserveAssessment — Target=None skips assessment' 
     }
 }
 
-# ── Describe 4: N+2 case — required doubles ───────────────────────────────────
-Describe 'Get-S2DMaintenanceReserveAssessment — N+2 requires 2x node capacity' {
+# ── Describe 4: N+2 case — context doubles ───────────────────────────────────
+Describe 'Get-S2DMaintenanceReserveAssessment — N+2 context is 2x node capacity' {
 
     BeforeAll {
         $script:result4 = InModuleScope S2DCartographer -Parameters @{
@@ -236,13 +226,16 @@ Describe 'Get-S2DMaintenanceReserveAssessment — N+2 requires 2x node capacity'
         $script:result4.Target | Should -Be 'N+2'
     }
 
-    It 'RequiredCapacity.Bytes equals 2x node raw bytes (30,720,000,000,000)' {
-        $script:result4.RequiredCapacity.Bytes | Should -Be ([int64]30720000000000)
+    It 'Status is Info for N+2' {
+        $script:result4.Status | Should -Be 'Info'
     }
 
-    It 'Does not meet (headroom 16.16TB < required 30.72TB)' {
-        # headroom = 16,160,000,000,000 < 30,720,000,000,000
-        $script:result4.Meets | Should -BeFalse
+    It 'ContextCapacity.Bytes equals 2x node raw bytes (30,720,000,000,000)' {
+        $script:result4.ContextCapacity.Bytes | Should -Be ([int64]30720000000000)
+    }
+
+    It 'Meets is $null for N+2' {
+        $script:result4.Meets | Should -BeNullOrEmpty
     }
 }
 
@@ -292,7 +285,7 @@ Describe 'Get-S2DMaintenanceReserveAssessment — empty and null inputs return g
         $r.Status | Should -Be 'Unknown'
     }
 
-    It 'PoolFreeBytes=0 and RebuildReserve=0 yields headroom=0 and Does not meet' {
+    It 'PoolFreeBytes=0 returns Info status (pool free no longer drives the verdict)' {
         $r = InModuleScope S2DCartographer -Parameters @{
             Disks = $script:PocDisks
             NC    = $script:NodeCount
@@ -306,9 +299,8 @@ Describe 'Get-S2DMaintenanceReserveAssessment — empty and null inputs return g
                 -Target                          'N+1'
         }
         $r | Should -Not -BeNullOrEmpty
-        $r.Status                  | Should -Be 'Does not meet'
-        $r.Meets                   | Should -BeFalse
-        $r.AvailableHeadroom.Bytes | Should -Be 0
+        $r.Status | Should -Be 'Info'
+        $r.Meets  | Should -BeNullOrEmpty
     }
 
     It 'disks with null SizeBytes are treated as 0 and result in Unknown (zero largest node)' {

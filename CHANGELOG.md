@@ -8,6 +8,48 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-06-30
+
+### Added
+
+- **Provisioning-aware 70% headroom presentation** — the 70% amber/warning treatment in the HTML KPI
+  tile, capacity-waterfall planning-line row, and expansion-headroom table now fires **only when
+  thin-provisioned volumes are present** (a full pool takes thin volumes offline). When all volumes are
+  fixed/thick, the 70% row is rendered as advisory/neutral (blue label, "Advisory — fixed volumes commit
+  footprint up front") because footprint is committed at creation time. The `Get-S2DExpansionHeadroom`
+  function gains a `HasThinVolumes` boolean on its output to drive this. Reworded all 70% prose to:
+  "70% is a recommended operational headroom guideline — mainly relevant for thin-provisioned volumes,
+  where a full pool takes thin volumes offline. Not a Microsoft hard limit. The firm storage limits are
+  footprints fitting the pool and the rebuild reserve staying intact."
+
+- **"Size to enter (New-Volume / WAC)" column** in all expansion-headroom tables (HTML, Word/PDF).
+  PowerShell `New-Volume -Size` and WAC parse size suffixes as binary (typing `2TB` means 2 TiB).
+  Each headroom row now shows the exact value to type, rendered as `{value}TB` (e.g. `0.65TB`),
+  computed as `NewUsableData.TiB` rounded **down** to 2 decimal places so the new volume always fits.
+  Past-line rows show `—`. A footnote explains the binary-suffix convention. The `SizeToEnterTiB`
+  property flows through to the JSON snapshot automatically. Identical wording and rounding to
+  Surveyor 2.6.0 so the two tools match exactly.
+
+### Fixed / Correction
+
+- **N+1/N+2 maintenance reserve re-framed as compute-advisory** — the v1.8.0 implementation
+  incorrectly treated the N+1/N+2 guidance as a **storage-pool capacity check** (producing a
+  Meets / Does-not-meet storage verdict). This was a framing error. Microsoft WAF documents N+1/N+2
+  as a **COMPUTE resiliency target** (reserve CPU + RAM so a node can be drained for updates or
+  lost without dropping VMs) and lists it separately from storage. Cartographer audits storage and
+  has no VM compute-allocation data; it cannot perform a real compute drain assessment.
+  Changes in this release:
+  - `Get-S2DMaintenanceReserveAssessment`: `Status` is always `'Info'`; `Meets` is always `$null`;
+    the output now surfaces `LargestNodeCapacity` and `ContextCapacity` as informational reference
+    values. `RequiredCapacity` and `AvailableHeadroom` are retained as `$null` for JSON schema
+    continuity.
+  - `Get-S2DHealthStatus` Check 12 (`MaintenanceReserveN1`): always `Status='Pass'`,
+    `Severity='Info'` — never contributes a storage Warning or Fail to the health rollup.
+    Storage reserve adequacy is governed by Check 1 (ReserveAdequacy) only.
+  - HTML and Word reports: MRA section re-labelled "Compute Maintenance Reserve Context — Advisory";
+    removed storage-fail styling (amber/red); shows largest-node raw capacity as context.
+  - All 70% prose corrected to not imply N+1 is a firm storage limit.
+
 ## [1.8.0] — 2026-06-30
 
 ### Added

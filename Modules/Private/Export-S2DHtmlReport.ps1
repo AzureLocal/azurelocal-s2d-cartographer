@@ -24,6 +24,14 @@ function Export-S2DHtmlReport {
     $disks = if ($IncludeNonPoolDisks) { $allDisks } else { @($allDisks | Where-Object { $_.IsPoolMember -ne $false }) }
     $cache = $ClusterData.CacheTier
 
+    # Part A: provisioning-aware 70% framing.
+    # Determine if any workload (non-infra) volumes are thin-provisioned.
+    # Used for the 70% KPI tile, waterfall planning-line row, and headroom table.
+    # Null-safe: ProvisioningType comparison is guarded against $null via -eq (returns $false when $null).
+    $hasThinVolumes = [bool](@($vols | Where-Object {
+        (-not $_.IsInfrastructureVolume) -and ($_.ProvisioningType -eq 'Thin')
+    }).Count -gt 0)
+
     $overallBg = switch ($oh) { 'Healthy'{'#dff6dd'} 'Warning'{'#fff4ce'} 'Critical'{'#fde7e9'} default{'#f3f2f1'} }
     $overallFg = switch ($oh) { 'Healthy'{'#107c10'} 'Warning'{'#d47a00'} 'Critical'{'#d13438'} default{'#323130'} }
 
@@ -74,11 +82,21 @@ function Export-S2DHtmlReport {
             if ($_.Stage -eq 6 -and $wf.PlanningLine70Pct -and $wf.PlanningLine70Pct.Bytes -gt 0) {
                 $lineTB  = [math]::Round($wf.PlanningLine70Pct.TB,  2)
                 $lineTiB = [math]::Round($wf.PlanningLine70Pct.TiB, 2)
-                $alertStyle = if ($wfAbove70Flag) { "background:#fff4ce" } else { "background:#faf9f8" }
-                $alertBadge = if ($wfAbove70Flag) {
+                # Part A: amber alert only when thin volumes are present; neutral/advisory otherwise.
+                $alertStyle = if ($wfAbove70Flag -and $hasThinVolumes) { "background:#fff4ce" } else { "background:#faf9f8" }
+                $alertBadge = if ($wfAbove70Flag -and $hasThinVolumes) {
                     "<span style='font-size:10px;background:#fff4ce;color:#d47a00;border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700'>ALERT: above 70% line</span>"
+                } elseif ($wfAbove70Flag) {
+                    "<span style='font-size:10px;background:#eff6fc;color:#0078d4;border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:500'>Above 70% (advisory)</span>"
                 } else { '' }
-                $lineRow = "<tr style='$alertStyle'><td style='text-align:center;padding:6px 4px'><span style='color:#e8a218;font-size:14px'>&#x25BA;</span></td><td style='font-weight:700;color:#e8a218;padding:6px 8px'>70%</td><td style='font-weight:600;padding:6px 8px;color:#e8a218;white-space:nowrap'>Planning Line$alertBadge</td><td></td><td style='color:#605e5c;padding:6px 8px;font-size:12px'>70% of available-for-volumes (footprint basis). Workload volume footprint should not exceed this threshold. Compare against pool footprint consumed by workload volumes — not usable data size.</td><td style='text-align:right;font-weight:600;padding:6px 8px;white-space:nowrap;color:#e8a218'>$lineTB TB<br><span style='font-size:11px;color:#a19f9d;font-weight:400'>$lineTiB TiB</span></td></tr>"
+                $lineLabel      = if ($hasThinVolumes) { 'Planning Line' } else { 'Advisory Line' }
+                $lineColor      = if ($hasThinVolumes) { '#e8a218' } else { '#0078d4' }
+                $lineDesc       = if ($hasThinVolumes) {
+                    '70% of available-for-volumes (footprint basis). Thin volumes are present — a full pool takes thin volumes offline. Workload footprint should stay below this line.'
+                } else {
+                    '70% is a recommended operational headroom guideline — mainly relevant for thin-provisioned volumes, where a full pool takes thin volumes offline. Not a Microsoft hard limit. The firm limits are footprints fitting the pool and the rebuild reserve staying intact. All volumes are fixed — footprint is committed up front.'
+                }
+                $lineRow = "<tr style='$alertStyle'><td style='text-align:center;padding:6px 4px'><span style='color:$lineColor;font-size:14px'>&#x25BA;</span></td><td style='font-weight:700;color:$lineColor;padding:6px 8px'>70%</td><td style='font-weight:600;padding:6px 8px;color:$lineColor;white-space:nowrap'>$lineLabel$alertBadge</td><td></td><td style='color:#605e5c;padding:6px 8px;font-size:12px'>$lineDesc</td><td style='text-align:right;font-weight:600;padding:6px 8px;white-space:nowrap;color:$lineColor'>$lineTB TB<br><span style='font-size:11px;color:#a19f9d;font-weight:400'>$lineTiB TiB</span></td></tr>"
                 "$stageRow`n$lineRow"
             } else {
                 $stageRow
@@ -164,28 +182,24 @@ function Export-S2DHtmlReport {
         "<tr><td>$($_.FriendlyName)$infraTag</td><td>$($_.ResiliencySettingName) ($($_.NumberOfDataCopies) copies)</td><td>$(if($_.Size){"$($_.Size.TiB) TiB"}else{'N/A'})</td><td>$(if($_.FootprintOnPool){"$($_.FootprintOnPool.TiB) TiB"}else{'N/A'})</td><td>$($_.EfficiencyPercent)%</td><td>$($_.ProvisioningType)</td>$thinCells<td>$hs</td></tr>"
     }) -join "`n"
 
-    # ── Maintenance reserve assessment indicator ──────────────────────────────
+    # ── Compute maintenance reserve context note (INFORMATIONAL ONLY) ────────
     # DEFENSIVE: every property access is guarded; $null assessment skips the section.
+    # N+1/N+2 is a COMPUTE resiliency concept — not a storage-pool requirement.
+    # This section shows largest-node context only; no storage pass/fail styling.
     $mraSectionHtml = ''
     $mra = $ClusterData.MaintenanceReserveAssessment
     if ($mra -and $mra.Status -ne 'Unknown') {
-        $mraStatusColor  = if ($mra.Meets) { '#107c10' } else { '#d47a00' }
-        $mraStatusBg     = if ($mra.Meets) { '#dff6dd' } else { '#fff4ce' }
-        $mraStatusText   = if ($mra.Meets) { 'Meets' } else { 'Does not meet' }
         $mraTargetLabel  = if ($mra.Target) { [string]$mra.Target } else { 'N+1' }
-        $mraReqTB        = if ($mra.RequiredCapacity)  { [math]::Round($mra.RequiredCapacity.TB,  2) }  else { 'N/A' }
-        $mraReqTiB       = if ($mra.RequiredCapacity)  { [math]::Round($mra.RequiredCapacity.TiB, 2) }  else { 'N/A' }
-        $mraAvTB         = if ($mra.AvailableHeadroom) { [math]::Round($mra.AvailableHeadroom.TB,  2) } else { 'N/A' }
-        $mraAvTiB        = if ($mra.AvailableHeadroom) { [math]::Round($mra.AvailableHeadroom.TiB, 2) } else { 'N/A' }
+        $mraNodeTB       = if ($mra.LargestNodeCapacity) { [math]::Round($mra.LargestNodeCapacity.TB,  2) } else { 'N/A' }
+        $mraNodeTiB      = if ($mra.LargestNodeCapacity) { [math]::Round($mra.LargestNodeCapacity.TiB, 2) } else { 'N/A' }
         $mraNoteHtml     = if ($mra.Note) { "<p style='font-size:12px;color:#605e5c;margin-top:8px'>$([System.Net.WebUtility]::HtmlEncode([string]$mra.Note))</p>" } else { '' }
         $mraSectionHtml  = @"
 <div class='section'>
-  <h2>Maintenance Reserve ($mraTargetLabel)</h2>
-  <p style='margin-bottom:12px;font-size:12px;color:var(--muted)'>Microsoft WAF recommends holding at least one node's worth of capacity beyond the rebuild reserve so that a node can be fully drained for patching without starving the pool. This is advisory — separate from and additive to the rebuild reserve.</p>
-  <div class='overview-grid' style='max-width:640px'>
-    <div class='kpi' style='background:$mraStatusBg;border-color:$mraStatusColor'><div class='val' style='color:$mraStatusColor'>$mraStatusText</div><div class='lbl'>$mraTargetLabel Status</div></div>
-    <div class='kpi'><div class='val'>$mraReqTB TB</div><div class='lbl'>Required ($mraReqTiB TiB)</div></div>
-    <div class='kpi'><div class='val'>$mraAvTB TB</div><div class='lbl'>Available Headroom ($mraAvTiB TiB)</div></div>
+  <h2>Compute Maintenance Reserve Context ($mraTargetLabel) — Advisory</h2>
+  <p style='margin-bottom:12px;font-size:12px;color:var(--muted)'><strong>N+1/N+2 is a COMPUTE resiliency target</strong> — reserve one or two nodes' worth of CPU + RAM so a node can be drained for updates or lost without dropping VMs. Microsoft WAF scopes this to compute and lists it separately from storage. It is not a storage-pool reserve. The firm storage reserves are the per-drive rebuild reserve and keeping volume footprints within the pool (see Health Checks).</p>
+  <div class='overview-grid' style='max-width:480px'>
+    <div class='kpi'><div class='val'>$mraNodeTB TB</div><div class='lbl'>Largest node raw storage ($mraNodeTiB TiB)</div></div>
+    <div class='kpi' style='background:#eff6fc;border-color:#0078d4'><div class='val' style='color:#0078d4'>Advisory</div><div class='lbl'>$mraTargetLabel — compute context only</div></div>
   </div>
   $mraNoteHtml
 </div>
@@ -196,26 +210,37 @@ function Export-S2DHtmlReport {
     $eh = $ClusterData.ExpansionHeadroom
     $ehCurrentPct   = if ($eh) { $eh.CurrentUtilizationPct } else { 0 }
     $ehCopies       = if ($eh) { $eh.PrevalentDataCopies }   else { 2 }
+    # $hasThinVolumes is already computed from $vols above — reuse for headroom table too.
     $ehTableRows    = ''
     $ehChartLabels  = ''
     $ehChartTB      = ''
     $ehChartTiB     = ''
-    $ehPastAny      = $false
     if ($eh -and $eh.Thresholds) {
         $ehTableRows = ($eh.Thresholds | ForEach-Object {
             $t = $_
             $rowStyle  = if ($t.IsRecommendedPlanningLine) { " style='background:#fffde7'" } else { '' }
             $planBadge = if ($t.IsRecommendedPlanningLine) {
-                " <span style='font-size:10px;background:#fff4ce;color:#d47a00;border-radius:3px;padding:1px 6px;margin-left:4px;font-weight:700'>Recommended planning line</span>"
+                if ($hasThinVolumes) {
+                    " <span style='font-size:10px;background:#fff4ce;color:#d47a00;border-radius:3px;padding:1px 6px;margin-left:4px;font-weight:700'>Planning line — thin volumes present</span>"
+                } else {
+                    " <span style='font-size:10px;background:#eff6fc;color:#0078d4;border-radius:3px;padding:1px 6px;margin-left:4px;font-weight:500'>Advisory — fixed volumes commit footprint up front</span>"
+                }
             } else { '' }
             $pastBadge = if ($t.IsPastLine) {
                 " <span style='font-size:10px;background:#fde7e9;color:#d13438;border-radius:3px;padding:1px 6px;margin-left:4px;font-weight:700'>PAST</span>"
-                $ehPastAny = $true
             } else { '' }
-            $budgetStr    = "$($t.FootprintBudget.TB) TB / $($t.FootprintBudget.TiB) TiB"
-            $remainFPStr  = "$($t.RemainingFootprint.TB) TB / $($t.RemainingFootprint.TiB) TiB"
-            $remainDStr   = "$($t.NewUsableData.TB) TB / $($t.NewUsableData.TiB) TiB"
-            "<tr$rowStyle><td style='font-weight:700'>$($t.FillTargetPct)%$planBadge$pastBadge</td><td>$budgetStr</td><td>$remainFPStr</td><td>$remainDStr</td></tr>"
+            $budgetStr   = "$($t.FootprintBudget.TB) TB / $($t.FootprintBudget.TiB) TiB"
+            $remainFPStr = "$($t.RemainingFootprint.TB) TB / $($t.RemainingFootprint.TiB) TiB"
+            $remainDStr  = "$($t.NewUsableData.TB) TB / $($t.NewUsableData.TiB) TiB"
+            # Part B: SizeToEnterTiB — value to type into New-Volume -Size or WAC.
+            # Null-safe: older JSON snapshots may not carry this property.
+            $steProp = $t.PSObject.Properties['SizeToEnterTiB']
+            $steStr = if ($t.IsPastLine -or $null -eq $steProp) {
+                "<span style='color:#a19f9d'>&#x2014;</span>"
+            } else {
+                "<strong>$($steProp.Value)TB</strong>"
+            }
+            "<tr$rowStyle><td style='font-weight:700'>$($t.FillTargetPct)%$planBadge$pastBadge</td><td>$budgetStr</td><td>$remainFPStr</td><td>$remainDStr</td><td style='text-align:center'>$steStr</td></tr>"
         }) -join "`n"
 
         $ehChartLabels = ($eh.Thresholds | ForEach-Object { "'$($_.FillTargetPct)%'" }) -join ','
@@ -304,7 +329,7 @@ tr:hover{background:#f3f2f1}
     <div class="kpi"><div class="val">$(if($wf){"$($wf.RawCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Raw Capacity (binary)</div></div>
     <div class="kpi"><div class="val">$(if($wf){"$($wf.AvailableForVolumes.TiB) TiB"}else{'N/A'})</div><div class="lbl">Avail for Volumes — footprint</div></div>
     <div class="kpi"><div class="val">$(if($wf){"$($wf.UsableCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Usable Data — after resiliency</div></div>
-    <div class="kpi$(if($wf -and $wf.IsAbove70PctLine){' warn'}else{''})"><div class="val">$(if($wf -and $wf.PlanningLine70Pct){"$($wf.PlanningLine70Pct.TiB) TiB"}else{'N/A'})</div><div class="lbl">70% Planning Line — footprint</div></div>
+    <div class="kpi$(if($wf -and $wf.IsAbove70PctLine -and $hasThinVolumes){' warn'}else{''})"><div class="val">$(if($wf -and $wf.PlanningLine70Pct){"$($wf.PlanningLine70Pct.TiB) TiB"}else{'N/A'})</div><div class="lbl">$(if($hasThinVolumes){'70% Planning Line — footprint'}else{'70% Advisory Line — footprint'})</div></div>
     <div class="kpi"><div class="val">$(if($pool){"$($pool.RemainingSize.TiB) TiB"}else{'N/A'})</div><div class="lbl">Pool Free (binary)</div></div>
     <div class="kpi"><div class="val">$($disks.Count)</div><div class="lbl">Physical Disks</div></div>
     <div class="kpi"><div class="val">$(@($vols | Where-Object { -not $_.IsInfrastructureVolume }).Count)</div><div class="lbl">Workload Volumes</div></div>
@@ -362,10 +387,12 @@ tr:hover{background:#f3f2f1}
 <div class="section">
   <h2>Expansion Headroom</h2>
   <p style="margin-bottom:12px;font-size:12px;color:var(--muted)">How much room remains to expand existing volumes or create new ones, measured against Available-for-Volumes (footprint basis). New-volume usable data assumes <strong>$ehCopies data copies</strong> (prevailing resiliency — assumed for estimates). Current pool utilization: <strong>$ehCurrentPct%</strong> of available-for-volumes.</p>
-  <table style="margin-bottom:16px">
-    <thead><tr style="background:#f3f2f1"><th>Fill target</th><th>Footprint budget (TB / TiB)</th><th>Remaining footprint (TB / TiB)</th><th>New usable data (TB / TiB)</th></tr></thead>
+  <p style="margin-bottom:12px;font-size:12px;color:var(--muted)">70% is a recommended operational headroom guideline — mainly relevant for thin-provisioned volumes, where a full pool takes thin volumes offline. Not a Microsoft hard limit. The firm limits are footprints fitting the pool and the rebuild reserve staying intact.</p>
+  <table style="margin-bottom:8px">
+    <thead><tr style="background:#f3f2f1"><th>Fill target</th><th>Footprint budget (TB / TiB)</th><th>Remaining footprint (TB / TiB)</th><th>New usable data (TB / TiB)</th><th style="white-space:nowrap">Size to enter<br><span style="font-weight:400;font-size:11px">New-Volume / WAC</span></th></tr></thead>
     <tbody>$ehTableRows</tbody>
   </table>
+  <p style="margin-bottom:16px;font-size:11px;color:var(--muted);font-style:italic">Size to enter is the value to type into New-Volume -Size or WAC. PowerShell and WAC read size suffixes as binary (1 TB = 1 TiB), so this equals the TiB column, rounded down so the new volume always fits.</p>
   <div style="position:relative;height:220px"><canvas id="ehChart"></canvas></div>
 </div>
 

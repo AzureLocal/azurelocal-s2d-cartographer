@@ -280,6 +280,10 @@ Describe 'Get-S2DExpansionHeadroom — POC cluster golden values (AB#1.7.1)' {
         It 'Thresholds array has 4 entries' {
             $Script:result.Thresholds.Count | Should -Be 4
         }
+
+        It 'HasThinVolumes = $false (all fixture volumes are Fixed)' {
+            $Script:result.HasThinVolumes | Should -BeFalse
+        }
     }
 
     Context '70% threshold (recommended planning line)' {
@@ -305,6 +309,10 @@ Describe 'Get-S2DExpansionHeadroom — POC cluster golden values (AB#1.7.1)' {
         It 'FootprintBudget is an S2DCapacity object' {
             $Script:t70.FootprintBudget.GetType().Name | Should -Be 'S2DCapacity'
         }
+        # Part B: SizeToEnterTiB — NewUsableData.TiB=0.65 → floor2=0.65
+        It 'SizeToEnterTiB = 0.65 (floor of NewUsableData.TiB)' {
+            $Script:t70.SizeToEnterTiB | Should -Be 0.65
+        }
     }
 
     Context '80% threshold' {
@@ -326,6 +334,10 @@ Describe 'Get-S2DExpansionHeadroom — POC cluster golden values (AB#1.7.1)' {
             $Script:t80.NewUsableData.TB | Should -BeGreaterThan 1.81
             $Script:t80.NewUsableData.TB | Should -BeLessThan    1.87
         }
+        # Part B: SizeToEnterTiB — NewUsableData.TiB=1.67 → floor2=1.67
+        It 'SizeToEnterTiB = 1.67 (floor of NewUsableData.TiB)' {
+            $Script:t80.SizeToEnterTiB | Should -Be 1.67
+        }
     }
 
     Context '90% threshold' {
@@ -345,6 +357,10 @@ Describe 'Get-S2DExpansionHeadroom — POC cluster golden values (AB#1.7.1)' {
         It 'NewUsableData.TB approx 2.96 (±0.02)' {
             $Script:t90.NewUsableData.TB | Should -BeGreaterThan 2.93
             $Script:t90.NewUsableData.TB | Should -BeLessThan    2.99
+        }
+        # Part B: SizeToEnterTiB — NewUsableData.TiB=2.69 → floor2=2.69
+        It 'SizeToEnterTiB = 2.69 (floor of NewUsableData.TiB)' {
+            $Script:t90.SizeToEnterTiB | Should -Be 2.69
         }
     }
 
@@ -366,6 +382,10 @@ Describe 'Get-S2DExpansionHeadroom — POC cluster golden values (AB#1.7.1)' {
         It 'NewUsableData.TB approx 4.08 (±0.02)' {
             $Script:t100.NewUsableData.TB | Should -BeGreaterThan 4.05
             $Script:t100.NewUsableData.TB | Should -BeLessThan    4.11
+        }
+        # Part B: SizeToEnterTiB — NewUsableData.TiB=3.71 → floor2=3.71
+        It 'SizeToEnterTiB = 3.71 (floor of NewUsableData.TiB)' {
+            $Script:t100.SizeToEnterTiB | Should -Be 3.71
         }
     }
 
@@ -405,6 +425,43 @@ Describe 'Get-S2DExpansionHeadroom — POC cluster golden values (AB#1.7.1)' {
             }
             $nullResult.AvailableForVolumesBytes | Should -Be 0
             ($nullResult.Thresholds | ForEach-Object { $_.FootprintBudget.Bytes } | Measure-Object -Sum).Sum | Should -Be 0
+        }
+
+        It 'HasThinVolumes = $true when a workload thin volume is present' {
+            $thinResult = InModuleScope S2DCartographer -Parameters @{ Wf = $Script:fakeWaterfall } {
+                param($Wf)
+                $thinVols = @(
+                    [PSCustomObject]@{
+                        FriendlyName           = 'ThinVol'
+                        IsInfrastructureVolume = $false
+                        NumberOfDataCopies     = 2
+                        ProvisioningType       = 'Thin'
+                        FootprintOnPool        = [S2DCapacity]::new([int64]1000000000000)
+                    }
+                )
+                Get-S2DExpansionHeadroom -Waterfall $Wf -Volumes $thinVols
+            }
+            $thinResult.HasThinVolumes | Should -BeTrue
+        }
+
+        It 'IsPastLine rows have SizeToEnterTiB = 0' {
+            # Force all volumes into the pool so every threshold is past-line
+            $pastResult = InModuleScope S2DCartographer -Parameters @{ Wf = $Script:fakeWaterfall } {
+                param($Wf)
+                # Use a volume footprint that exceeds 100% of A to put all thresholds past
+                $bigVol = @(
+                    [PSCustomObject]@{
+                        FriendlyName           = 'BigVol'
+                        IsInfrastructureVolume = $false
+                        NumberOfDataCopies     = 2
+                        FootprintOnPool        = [S2DCapacity]::new($Wf.AvailableForVolumes.Bytes + [int64]1)
+                    }
+                )
+                Get-S2DExpansionHeadroom -Waterfall $Wf -Volumes $bigVol
+            }
+            $pastResult.Thresholds | ForEach-Object {
+                $_.SizeToEnterTiB | Should -Be 0
+            }
         }
     }
 }
