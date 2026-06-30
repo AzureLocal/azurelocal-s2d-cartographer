@@ -1,27 +1,25 @@
 # Roadmap
 
-S2DCartographer follows a milestone-based release cadence. Each milestone targets a focused capability area. The current stable release is **v1.4.2**.
+S2DCartographer follows a milestone-based release cadence. Each milestone targets a focused
+capability area. The current stable release is **v1.7.0**, published live on PSGallery.
 
-Live status of everything below is tracked on [GitHub Milestones](https://github.com/AzureLocal/azurelocal-s2d-cartographer/milestones).
+Live status of everything below is tracked on
+[GitHub Milestones](https://github.com/AzureLocal/azurelocal-s2d-cartographer/milestones).
 
 ---
 
-## Next Release — v1.5.0 — Output Quality
+## Upcoming — v2.0.0 — Extended Hardware Coverage
 
-Stabilisation milestone. Fixes broken PDF graphs and Word document layout in the current product before any new capability is added.
-
-| Issue | Fix |
+| Issue | Feature |
 | --- | --- |
-| [#53](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/53) | **PDF: capacity model waterfall bar graph** renders incorrectly — bar chart visual is wrong despite correct data values. |
-| [#54](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/54) | **PDF: pool allocation and storage pool health bar graphs** display incorrectly. |
-| [#55](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/55) | **Word: executive summary table** is cramped and unreadable — cell spacing, padding, and sizing need correction. |
-| [#56](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/56) | **Word: overall document formatting and layout** does not meet customer-facing quality standards. |
+| [#25](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/25) | **OEM-specific disk enrichment** — extend `Get-S2DPhysicalDiskInventory` with vendor-specific data from Dell iDRAC, HPE iLO, Lenovo XClarity, and DataON interfaces. Surfaces drive bay location, predicted failure, and platform-level health alongside standard S2D disk data. Pending a validation environment across all four vendors. |
 
 ---
 
-## v1.6.0 — Visualization, Scoring & Output
+## Upcoming — Future Release — Visualization, Scoring & Output
 
-Feature uplift covering interactive diagrams, graduated health check scoring, PDF layout improvements, and operational robustness.
+Feature uplift covering interactive diagrams, graduated health check scoring, PDF layout
+improvements, and operational robustness. Targeting a release after v2.0.0.
 
 ### Health Check & Scoring
 
@@ -60,26 +58,15 @@ Feature uplift covering interactive diagrams, graduated health check scoring, PD
 | [#66](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/66) | **Full-screen progress overlay** — named collection stage labels shown during run so operators know what is happening. |
 | [#67](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/67) | **Per-section search and filter** — search input in HTML report to filter table rows per section. |
 
-### Robustness
-
-| Issue | Feature |
-| --- | --- |
-| [#69](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/69) | **Concurrent collection guard and empty-data safeguards** — prevent overlapping runs; handle empty collector results without crashing report generation. |
-
----
-
-## v2.0.0 — Extended Hardware Coverage
-
-| Issue | Feature |
-| --- | --- |
-| [#25](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/25) | **OEM-specific disk enrichment** — extend `Get-S2DPhysicalDiskInventory` with vendor-specific data from Dell iDRAC, HPE iLO, Lenovo XClarity, and DataON interfaces. Surfaces drive bay location, predicted failure, and platform-level health alongside standard S2D disk data. Pending a validation environment across all four vendors. |
-
 ---
 
 ## Completed
 
 | Version | Highlights |
 | --- | --- |
+| **v1.7.0** | Wave 3 — Validation & report correctness. Cross-tool reconciliation keystone: golden-cluster Pester suite (24 cases, 4 clusters) asserts Cartographer engine output reconciles with Surveyor within ±2% (AB#4633). Concurrent collection guard prevents overlapping runs from corrupting shared state (AB#279). Empty-data safeguards added to `Get-S2DCapacityWaterfall`, `Get-S2DHealthStatus`, and `Get-S2DStoragePoolInfo` (AB#279). PDF waterfall bar now uses exact byte-derived TB values (AB#263 / [#53](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/53)). PDF pool allocation reserve boundary and pool health bar x-axis fixed (AB#264 / [#54](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/54)). Word executive summary table given explicit column widths and cell padding (AB#265 / [#55](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/55)). Word overall document layout — margins, fixed-layout tables, hand-tuned column widths (AB#266 / [#56](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/56)). |
+| **v1.6.0** | Wave 2 — Legibility. Every capacity figure now carries both TB and TiB labels plus a space badge (`FOOTPRINT`, `DATA (usable)`, `INFORMATIONAL`) in the waterfall and HTML report (AB#4645). 70% planning line added — 70% of available-for-volumes vs. consumed volume footprint, matching Surveyor's definition exactly; surfaced as a KPI tile and dashed chart line (AB#4644). |
+| **v1.5.0** | Wave 1 — Capacity accuracy. Resiliency factor always derived from each volume's actual `NumberOfDataCopies`; fallback changed from 3.0 to 2.0 (two-way mirror) with explicit labeling when assumed (AB#4642). Reserve calculation confirmed canonical — one capacity drive per server, up to 4 drives, raw-byte basis (AB#4643). |
 | **v1.4.2** | Fix `RebuildCapacity` false Critical when NodeName grouping is unreliable after pool-member disk deduplication. |
 | **v1.4.1** | Fix pool-member disk duplication on multi-node clusters — `Get-PhysicalDisk` on any S2D node returns all pool members globally; deduplicate by `UniqueId` to prevent 4× inflation of Stage 1 raw capacity. Adds top-level `NodeCount` to JSON snapshot. |
 | **v1.4.0** | 7-stage waterfall (Stage 8 removed), stage health isolation (all stages always OK, reserve health on `ReserveStatus` only), reserve formula corrected, infra volume detection extended (`UserStorage_N`, `HCI_UserStorage_N`, `SBEAgent`), HTML delta column, Word report waterfall table, `Invoke-S2DCapacityWhatIf` delta loop fix. Closes [#46](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/46)–[#52](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/52). |
