@@ -30,13 +30,16 @@ function Export-S2DHtmlReport {
     # ── Waterfall chart data ──────────────────────────────────────────────────
     $wfLabels       = ''
     $wfValues       = ''
+    $wfTbValues     = ''   # AB#263: authoritative TB values — consumed via here-string interpolation below
     $wfDescRows     = ''
     $wf70LineTiB    = 0
     $wf70LineTB     = 0
     $wfAbove70Flag  = $false
     if ($wf) {
-        $wfLabels = ($wf.Stages | ForEach-Object { "'Stage $($_.Stage): $($_.Name)'" }) -join ','
-        $wfValues = ($wf.Stages | ForEach-Object { if ($_.Size) { [math]::Round($_.Size.TiB, 2) } else { 0 } }) -join ','
+        $wfLabels   = ($wf.Stages | ForEach-Object { "'Stage $($_.Stage): $($_.Name)'" }) -join ','
+        $wfValues   = ($wf.Stages | ForEach-Object { if ($_.Size) { [math]::Round($_.Size.TiB, 2) } else { 0 } }) -join ','
+        # AB#263: authoritative TB values from S2DCapacity.TB (byte-accurate) — do not approximate TiB × 1.0995 in JS.
+        $wfTbValues = ($wf.Stages | ForEach-Object { if ($_.Size) { [math]::Round($_.Size.TB,  2) } else { 0 } }) -join ','
 
         # AB#4644: 70% planning line values for chart annotation
         if ($wf.PlanningLine70Pct) {
@@ -320,7 +323,8 @@ tr:hover{background:#f3f2f1}
 </div>
 <script>
 const tibValues        = [$wfValues];
-const tbValues         = tibValues.map(v => Math.round(v * 1.0995 * 100) / 100);
+// AB#263: authoritative TB values from PowerShell byte math — never use a JS approximation factor.
+const tbValues         = [$wfTbValues];
 const labels           = [$wfLabels];
 // AB#4644: 70% planning line — 70% of Available-for-Volumes (footprint basis)
 const planLine70TiB    = $wf70LineTiB;
@@ -405,9 +409,10 @@ const reserveLine = {
     ctx.font = '11px Segoe UI,Arial,sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Pool total', boundaryX, chart.chartArea.top - 8);
-    // Reserve boundary line (dashed amber)
+    // Reserve boundary line (dashed amber) — drawn at start-of-reserve zone, not at reserve size.
+    // AB#264: the reserve zone begins at poolTotal - reserve, not at the reserve value itself.
     if (reserveTB > 0) {
-      const reserveX = xScale.getPixelForValue(reserveTB);
+      const reserveX = xScale.getPixelForValue(poolTotalTB - reserveTB);
       ctx.strokeStyle = '#e8a218';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 4]);
@@ -522,7 +527,9 @@ new Chart(phCtx, {
     scales: {
       x: {
         stacked: true, beginAtZero: true,
-        max: Math.ceil(Math.max(ph.poolTotal, ph.used + ph.reserveEaten + ph.overcommit) * 1.08),
+        // AB#264: include all segments in the max calc so Chart.js never clips the bar.
+        // Previous formula omitted ph.free and ph.reserveOk, clipping healthy clusters.
+        max: Math.ceil(Math.max(ph.poolTotal, ph.used + ph.free + ph.reserveOk + ph.reserveEaten + ph.overcommit) * 1.1),
         title: { display: true, text: 'TB' },
         grid: { color: '#edebe9' }
       },

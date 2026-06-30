@@ -14,6 +14,10 @@ function Export-S2DWordReport {
     $dir = Split-Path $OutputPath -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 
+    # Page geometry (US Letter, 1-inch margins all sides):
+    # Page width = 12240 twips; margins = 1440 left + 1440 right → usable = 9360 twips.
+    $pageWidth = 9360
+
     $cn    = $ClusterData.ClusterName
     $nc    = $ClusterData.NodeCount
     $wf    = $ClusterData.CapacityWaterfall
@@ -46,7 +50,8 @@ function Export-S2DWordReport {
 
     function local:PageBreak { "<w:p><w:r><w:br w:type='page'/></w:r></w:p>" }
 
-    # Full-width branded banner — used for cover page and section dividers
+    # Full-width branded banner — used for cover page and section dividers.
+    # w:w="$pageWidth" spans the full usable page width (12240 - 1440 left - 1440 right = 9360 twips).
     function local:Banner {
         param(
             [string]$line1,
@@ -65,7 +70,8 @@ function Export-S2DWordReport {
         @"
 <w:tbl>
 <w:tblPr>
-  <w:tblW w:w="0" w:type="auto"/>
+  <w:tblW w:w="$pageWidth" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
   <w:tblBorders>
     <w:top w:val="none" w:sz="0" w:color="auto"/>
     <w:left w:val="none" w:sz="0" w:color="auto"/>
@@ -84,7 +90,7 @@ function Export-S2DWordReport {
 <w:tr>
   <w:tc>
     <w:tcPr>
-      <w:tcW w:w="0" w:type="auto"/>
+      <w:tcW w:w="$pageWidth" w:type="dxa"/>
       <w:shd w:val="clear" w:color="auto" w:fill="$fill"/>
       <w:vAlign w:val="center"/>
     </w:tcPr>
@@ -102,13 +108,15 @@ function Export-S2DWordReport {
 "@
     }
 
-    # Section header — narrower, blue bar with left-aligned title
+    # Section header — full-width blue bar with left-aligned title.
+    # Fixed at page width ($pageWidth dxa) and includes cell padding for legibility.
     function local:SectionHeader {
         param([string]$title, [string]$fill = '0078D4')
         @"
 <w:tbl>
 <w:tblPr>
-  <w:tblW w:w="0" w:type="auto"/>
+  <w:tblW w:w="$pageWidth" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
   <w:tblBorders>
     <w:top w:val="none" w:sz="0" w:color="auto"/>
     <w:left w:val="none" w:sz="0" w:color="auto"/>
@@ -117,18 +125,24 @@ function Export-S2DWordReport {
     <w:insideH w:val="none" w:sz="0" w:color="auto"/>
     <w:insideV w:val="none" w:sz="0" w:color="auto"/>
   </w:tblBorders>
+  <w:tblCellMar>
+    <w:top w:w="120" w:type="dxa"/>
+    <w:left w:w="200" w:type="dxa"/>
+    <w:bottom w:w="120" w:type="dxa"/>
+    <w:right w:w="200" w:type="dxa"/>
+  </w:tblCellMar>
 </w:tblPr>
 <w:tr>
   <w:tc>
     <w:tcPr>
-      <w:tcW w:w="0" w:type="auto"/>
+      <w:tcW w:w="$pageWidth" w:type="dxa"/>
       <w:shd w:val="clear" w:color="auto" w:fill="$fill"/>
     </w:tcPr>
     <w:p>
       <w:pPr><w:spacing w:before="140" w:after="140"/></w:pPr>
       <w:r>
         <w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="28"/><w:szCs w:val="28"/><w:rFonts w:ascii="Segoe UI" w:hAnsi="Segoe UI"/></w:rPr>
-        <w:t xml:space="preserve">  $(Esc $title)</w:t>
+        <w:t xml:space="preserve">$(Esc $title)</w:t>
       </w:r>
     </w:p>
   </w:tc>
@@ -137,9 +151,14 @@ function Export-S2DWordReport {
 "@
     }
 
-    # KPI tile table — colored boxes with large value + small label
+    # KPI tile table — colored boxes with large value + small label.
+    # Distributed across full page width: each cell gets ($pageWidth / count) twips.
+    # Value font reduced from 40 (20pt) to 32 (16pt) so multi-unit values like
+    # "22.44 TiB" fit without wrapping in each tile.
     function local:KpiTable {
         param([hashtable[]]$kpis)
+        $kpiCount  = [Math]::Max(1, $kpis.Count)
+        $cellWidth = [int][Math]::Floor($pageWidth / $kpiCount)
         $cells = $kpis | ForEach-Object {
             $bg = switch ($_.status) {
                 'Fail'    { 'FDE7E9' } 'Warn' { 'FFF4CE' } 'Pass' { 'DFF6DD' } default { 'EFF6FC' }
@@ -150,7 +169,7 @@ function Export-S2DWordReport {
             @"
 <w:tc>
   <w:tcPr>
-    <w:tcW w:w="0" w:type="auto"/>
+    <w:tcW w:w="$cellWidth" w:type="dxa"/>
     <w:shd w:val="clear" w:color="auto" w:fill="$bg"/>
     <w:tcBdr>
       <w:top w:val="single" w:sz="6" w:color="EDEBE9"/>
@@ -158,11 +177,17 @@ function Export-S2DWordReport {
       <w:bottom w:val="single" w:sz="6" w:color="EDEBE9"/>
       <w:right w:val="single" w:sz="6" w:color="EDEBE9"/>
     </w:tcBdr>
+    <w:tcMar>
+      <w:top w:w="100" w:type="dxa"/>
+      <w:left w:w="120" w:type="dxa"/>
+      <w:bottom w:w="100" w:type="dxa"/>
+      <w:right w:w="120" w:type="dxa"/>
+    </w:tcMar>
   </w:tcPr>
   <w:p>
     <w:pPr><w:jc w:val="center"/><w:spacing w:before="100" w:after="40"/></w:pPr>
     <w:r>
-      <w:rPr><w:b/><w:color w:val="$fg"/><w:sz w:val="40"/><w:szCs w:val="40"/><w:rFonts w:ascii="Segoe UI" w:hAnsi="Segoe UI"/></w:rPr>
+      <w:rPr><w:b/><w:color w:val="$fg"/><w:sz w:val="32"/><w:szCs w:val="32"/><w:rFonts w:ascii="Segoe UI" w:hAnsi="Segoe UI"/></w:rPr>
       <w:t>$(Esc $_.value)</w:t>
     </w:r>
   </w:p>
@@ -179,7 +204,8 @@ function Export-S2DWordReport {
         @"
 <w:tbl>
 <w:tblPr>
-  <w:tblW w:w="0" w:type="auto"/>
+  <w:tblW w:w="$pageWidth" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
   <w:tblBorders>
     <w:top w:val="none"/><w:left w:val="none"/>
     <w:bottom w:val="none"/><w:right w:val="none"/>
@@ -191,11 +217,30 @@ function Export-S2DWordReport {
 "@
     }
 
-    # Data table with blue header row and alternating body rows
+    # Data table with blue header row and alternating body rows.
+    # Always spans full page width ($pageWidth dxa). Optional $colWidths supplies
+    # explicit per-column widths in twips (dxa); if omitted, columns are
+    # distributed evenly. This prevents Word's autofit from squeezing wide-value
+    # columns (AB#265) and ensures the table never overflows the page (AB#266).
     function local:DataTable {
-        param([string[]]$headers, [object[]]$rows, [string[]]$props)
+        param(
+            [string[]]  $headers,
+            [object[]]  $rows,
+            [string[]]  $props,
+            [int[]]     $colWidths = @()   # explicit widths in twips; empty = even split
+        )
+        $colCount = $headers.Count
+        if ($colWidths.Count -eq $colCount) {
+            $widths = $colWidths
+        } else {
+            $evenWidth = [int][Math]::Floor($pageWidth / [Math]::Max(1, $colCount))
+            $widths    = @($evenWidth) * $colCount
+        }
+
+        $colIdx = 0
         $hcells = $headers | ForEach-Object {
-            "<w:tc><w:tcPr><w:shd w:val='clear' w:color='auto' w:fill='003A70'/><w:tcMar><w:top w:w='80' w:type='dxa'/><w:left w:w='120' w:type='dxa'/><w:bottom w:w='80' w:type='dxa'/><w:right w:w='120' w:type='dxa'/></w:tcMar></w:tcPr><w:p><w:pPr><w:spacing w:before='60' w:after='60'/></w:pPr><w:r><w:rPr><w:b/><w:color w:val='FFFFFF'/><w:sz w:val='18'/><w:szCs w:val='18'/><w:rFonts w:ascii='Segoe UI' w:hAnsi='Segoe UI'/></w:rPr><w:t>$(Esc $_)</w:t></w:r></w:p></w:tc>"
+            $cw = $widths[$colIdx]; $colIdx++
+            "<w:tc><w:tcPr><w:tcW w:w='$cw' w:type='dxa'/><w:shd w:val='clear' w:color='auto' w:fill='003A70'/><w:tcMar><w:top w:w='80' w:type='dxa'/><w:left w:w='120' w:type='dxa'/><w:bottom w:w='80' w:type='dxa'/><w:right w:w='120' w:type='dxa'/></w:tcMar></w:tcPr><w:p><w:pPr><w:spacing w:before='60' w:after='60'/></w:pPr><w:r><w:rPr><w:b/><w:color w:val='FFFFFF'/><w:sz w:val='18'/><w:szCs w:val='18'/><w:rFonts w:ascii='Segoe UI' w:hAnsi='Segoe UI'/></w:rPr><w:t>$(Esc $_)</w:t></w:r></w:p></w:tc>"
         }
         $hrow = "<w:tr><w:trPr><w:tblHeader/></w:trPr>$($hcells -join '')</w:tr>"
         $rowIndex = 0
@@ -203,16 +248,19 @@ function Export-S2DWordReport {
             $obj  = $_
             $fill = if ($rowIndex % 2 -eq 0) { 'FFFFFF' } else { 'F5F5F5' }
             $rowIndex++
+            $pIdx   = 0
             $dcells = $props | ForEach-Object {
                 $v = $obj.$_; $vStr = if ($null -eq $v) { '' } else { [string]$v }
-                "<w:tc><w:tcPr><w:shd w:val='clear' w:color='auto' w:fill='$fill'/><w:tcMar><w:top w:w='60' w:type='dxa'/><w:left w:w='120' w:type='dxa'/><w:bottom w:w='60' w:type='dxa'/><w:right w:w='120' w:type='dxa'/></w:tcMar></w:tcPr><w:p><w:pPr><w:spacing w:before='40' w:after='40'/></w:pPr><w:r><w:rPr><w:color w:val='323130'/><w:sz w:val='18'/><w:szCs w:val='18'/><w:rFonts w:ascii='Segoe UI' w:hAnsi='Segoe UI'/></w:rPr><w:t xml:space='preserve'>$(Esc $vStr)</w:t></w:r></w:p></w:tc>"
+                $cw = $widths[$pIdx]; $pIdx++
+                "<w:tc><w:tcPr><w:tcW w:w='$cw' w:type='dxa'/><w:shd w:val='clear' w:color='auto' w:fill='$fill'/><w:tcMar><w:top w:w='60' w:type='dxa'/><w:left w:w='120' w:type='dxa'/><w:bottom w:w='60' w:type='dxa'/><w:right w:w='120' w:type='dxa'/></w:tcMar></w:tcPr><w:p><w:pPr><w:spacing w:before='40' w:after='40'/></w:pPr><w:r><w:rPr><w:color w:val='323130'/><w:sz w:val='18'/><w:szCs w:val='18'/><w:rFonts w:ascii='Segoe UI' w:hAnsi='Segoe UI'/></w:rPr><w:t xml:space='preserve'>$(Esc $vStr)</w:t></w:r></w:p></w:tc>"
             }
             "<w:tr>$($dcells -join '')</w:tr>"
         }
         @"
 <w:tbl>
 <w:tblPr>
-  <w:tblW w:w="0" w:type="auto"/>
+  <w:tblW w:w="$pageWidth" w:type="dxa"/>
+  <w:tblLayout w:type="fixed"/>
   <w:tblBorders>
     <w:top w:val="single" w:sz="4" w:color="EDEBE9"/>
     <w:left w:val="single" w:sz="4" w:color="EDEBE9"/>
@@ -278,7 +326,11 @@ $($drows -join '')
     if ($Author)  { $summaryRows.Add([PSCustomObject]@{ Metric = 'Prepared By';   Value = $Author }) }
     if ($Company) { $summaryRows.Add([PSCustomObject]@{ Metric = 'Organization';  Value = $Company }) }
     $summaryRows.Add([PSCustomObject]@{ Metric = 'Report Date'; Value = $date })
-    $body += DataTable -headers @('Metric', 'Value') -rows $summaryRows -props @('Metric', 'Value')
+    # AB#265: explicit 35/65 column split so the Value column has room for
+    # multi-unit strings like "22.44 TiB (24.65 TB)" without wrapping.
+    # 9360 * 0.35 = 3276 (Metric); remainder 6084 (Value).
+    $body += DataTable -headers @('Metric', 'Value') -rows $summaryRows -props @('Metric', 'Value') `
+        -colWidths @(3276, 6084)
     $body += PageBreak
 
     # Capacity Waterfall
@@ -319,8 +371,12 @@ $($drows -join '')
             Firmware = $_.FirmwareVersion
         }
     }
+    # AB#266: 8 columns — proportioned so wide data columns (Node, Model, Size)
+    # get more space than short fixed-value columns (Type, Role, Wear, Firmware).
+    # Total = 9360: Node=1340 Model=2000 Type=780 Role=780 Size=1560 Wear=670 Health=780 Firmware=1450
     $body += DataTable -headers @('Node', 'Model', 'Type', 'Role', 'Size', 'Wear %', 'Health', 'Firmware') `
-        -rows $diskRows -props @('Node', 'Model', 'Type', 'Role', 'Size', 'Wear', 'Health', 'Firmware')
+        -rows $diskRows -props @('Node', 'Model', 'Type', 'Role', 'Size', 'Wear', 'Health', 'Firmware') `
+        -colWidths @(1340, 2000, 780, 780, 1560, 670, 780, 1450)
     $body += PageBreak
 
     # Volume Map
@@ -340,10 +396,14 @@ $($drows -join '')
             Health    = $_.HealthStatus
         }
     }
+    # AB#266: 9 columns — Volume name and Resiliency need the most space;
+    # numeric/status columns are narrower.
+    # Total = 9360: Name=1680 Res=1120 Size=900 FP=900 Eff=670 Prov=780 Headroom=1000 MaxFP=1000 Health=1310
     $body += DataTable `
         -headers @('Volume', 'Resiliency', 'Size', 'Pool Footprint', 'Efficiency', 'Provisioning', 'Growth Headroom', 'Max Potential FP', 'Health') `
         -rows $volRows `
-        -props @('Name', 'Resiliency', 'Size', 'Footprint', 'Eff', 'Prov', 'Headroom', 'MaxFP', 'Health')
+        -props @('Name', 'Resiliency', 'Size', 'Footprint', 'Eff', 'Prov', 'Headroom', 'MaxFP', 'Health') `
+        -colWidths @(1680, 1120, 900, 900, 670, 780, 1000, 1000, 1310)
     $body += PageBreak
 
     # Health Assessment
@@ -460,7 +520,7 @@ $($drows -join '')
 $bodyXml
 <w:sectPr>
   <w:pgSz w:w="12240" w:h="15840"/>
-  <w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"
+  <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"
            w:header="720" w:footer="720" w:gutter="0"/>
 </w:sectPr>
 </w:body>
