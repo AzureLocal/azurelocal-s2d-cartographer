@@ -1,7 +1,7 @@
 # Roadmap
 
 S2DCartographer follows a milestone-based release cadence. Each milestone targets a focused
-capability area. The current stable release is **v1.7.0**, published live on PSGallery.
+capability area. The current stable release is **v1.8.0**, published live on PSGallery.
 
 Live status of everything below is tracked on
 [GitHub Milestones](https://github.com/AzureLocal/azurelocal-s2d-cartographer/milestones).
@@ -64,6 +64,8 @@ improvements, and operational robustness. Targeting a release after v2.0.0.
 
 | Version | Highlights |
 | --- | --- |
+| **v1.8.0** | **Maintenance reserve (N+1) assessment** — reports whether the scanned cluster has enough free capacity (beyond the rebuild reserve) to drain a node for updates, per Microsoft Well-Architected guidance. New `MaintenanceReserveN1` health check and report indicator (Meets / Does not meet, with required vs available headroom in TB and TiB); configurable target via `-MaintenanceReserveTarget None\|N+1\|N+2` (default N+1). Assessment only — does not change any measured capacity number. Mirrors Surveyor's optional N+1/N+2 deduction. |
+| **v1.7.1** | **Expansion Headroom** report section (HTML, Word, PDF, JSON) — at 70% / 80% / 90% / 100% pool-fill targets, shows remaining pool footprint and new usable data (footprint ÷ resiliency copies) in TB and TiB, with a Chart.js chart; 70% row styled as the recommended planning line. Math identical to Surveyor's so the two tools reconcile. Fixed per-volume capacity efficiency to derive from the measured `FootprintOnPool ÷ Size` ratio — a two-copy mirror now correctly reports 50% (was mislabeled 25% on two-node clusters). |
 | **v1.7.0** | Wave 3 — Validation & report correctness. Cross-tool reconciliation keystone: golden-cluster Pester suite (24 cases, 4 clusters) asserts Cartographer engine output reconciles with Surveyor within ±2% (AB#4633). Concurrent collection guard prevents overlapping runs from corrupting shared state (AB#279). Empty-data safeguards added to `Get-S2DCapacityWaterfall`, `Get-S2DHealthStatus`, and `Get-S2DStoragePoolInfo` (AB#279). PDF waterfall bar now uses exact byte-derived TB values (AB#263 / [#53](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/53)). PDF pool allocation reserve boundary and pool health bar x-axis fixed (AB#264 / [#54](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/54)). Word executive summary table given explicit column widths and cell padding (AB#265 / [#55](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/55)). Word overall document layout — margins, fixed-layout tables, hand-tuned column widths (AB#266 / [#56](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/56)). |
 | **v1.6.0** | Wave 2 — Legibility. Every capacity figure now carries both TB and TiB labels plus a space badge (`FOOTPRINT`, `DATA (usable)`, `INFORMATIONAL`) in the waterfall and HTML report (AB#4645). 70% planning line added — 70% of available-for-volumes vs. consumed volume footprint, matching Surveyor's definition exactly; surfaced as a KPI tile and dashed chart line (AB#4644). |
 | **v1.5.0** | Wave 1 — Capacity accuracy. Resiliency factor always derived from each volume's actual `NumberOfDataCopies`; fallback changed from 3.0 to 2.0 (two-way mirror) with explicit labeling when assumed (AB#4642). Reserve calculation confirmed canonical — one capacity drive per server, up to 4 drives, raw-byte basis (AB#4643). |
