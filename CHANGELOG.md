@@ -6,6 +6,13 @@ All notable changes to S2DCartographer will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0](https://github.com/AzureLocal/azurelocal-s2d-cartographer/compare/v1.7.0...v1.8.0) (2026-06-30)
+
+
+### Features
+
+* **report:** expansion headroom section + fix per-volume efficiency (1.7.1) ([fcb928c](https://github.com/AzureLocal/azurelocal-s2d-cartographer/commit/fcb928c1b4361ca32de2a69a1c79f99c4d111984))
+
 ## [Unreleased]
 
 ## [1.7.1] — 2026-06-30
