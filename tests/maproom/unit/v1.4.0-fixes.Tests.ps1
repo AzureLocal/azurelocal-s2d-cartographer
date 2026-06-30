@@ -298,7 +298,8 @@ Describe 'v1.4.0 #47/#52 — Capacity waterfall is a purely theoretical 7-stage 
                     -LargestDiskSizeBytes ([int64]3840000000000) `
                     -PoolTotalBytes       ([int64]60820000000000) `
                     -PoolFreeBytes        ([int64]40820000000000)
-                $result.Stages[3].Description | Should -BeLike '*one drive per server*'
+                # AB#4645: description now says "one capacity drive per server" for clarity
+                $result.Stages[3].Description | Should -BeLike '*one*drive per server*'
             }
         }
     }

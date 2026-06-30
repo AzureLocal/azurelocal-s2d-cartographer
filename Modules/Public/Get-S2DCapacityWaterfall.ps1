@@ -104,6 +104,17 @@ function Get-S2DCapacityWaterfall {
     $waterfall.IsOvercommitted = $pool -and $pool.OvercommitRatio -gt 1.0
     $waterfall.OvercommitRatio = if ($pool) { $pool.OvercommitRatio } else { 0.0 }
 
+    # AB#4644: set IsAbove70PctLine from actual consumed workload volume footprint.
+    # Compares workload volume pool footprint (not usable data) against 70% of AvailableForVolumes.
+    $workloadFootprintBytes = [int64](
+        @($volumes | Where-Object { -not $_.IsInfrastructureVolume } | ForEach-Object {
+            if ($_.FootprintOnPool) { $_.FootprintOnPool.Bytes } else { [int64]0 }
+        } | Measure-Object -Sum).Sum
+    )
+    if ($waterfall.PlanningLine70Pct -and $waterfall.PlanningLine70Pct.Bytes -gt 0) {
+        $waterfall.IsAbove70PctLine = $workloadFootprintBytes -gt $waterfall.PlanningLine70Pct.Bytes
+    }
+
     $Script:S2DSession.CollectedData['CapacityWaterfall'] = $waterfall
     $waterfall
 }

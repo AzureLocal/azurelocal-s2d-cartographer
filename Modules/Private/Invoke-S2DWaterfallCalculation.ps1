@@ -107,14 +107,20 @@ function Invoke-S2DWaterfallCalculation {
     # ── Stage 5: Infrastructure volume ───────────────────────────────────────
     $stage5Bytes = $stage4Bytes - $InfraVolumeBytes
 
-    # ── Stage 6: Available ────────────────────────────────────────────────────
+    # ── Stage 6: Available for Volumes (footprint space) ─────────────────────
     $stage6Bytes = $stage5Bytes
 
-    # ── Stage 7: Theoretical resiliency ──────────────────────────────────────
+    # ── Stage 7: Theoretical resiliency (data / usable space) ────────────────
     $stage7Bytes = [int64]($stage6Bytes / $ResiliencyFactor)
     $theoreticalEffPct = [math]::Round(100.0 / $ResiliencyFactor, 1)
     # AB#4642: tag assumed vs measured so reports can label them differently.
     $resiliencyTag = if ($ResiliencyIsAssumed) { ' [ASSUMED — actual NumberOfDataCopies not available]' } else { '' }
+
+    # ── 70% planning line (AB#4644) ───────────────────────────────────────────
+    # Canonical definition (capacity-model.md §7): 70% of Available-for-Volumes,
+    # on a footprint basis — the threshold the over-allocation alert fires on.
+    # Compare consumed/planned volume *footprint* (not usable data) against this.
+    $planningLine70Bytes = [int64]($stage6Bytes * 0.70)
 
     # Stage 7 is the pipeline terminus — no Stage 8.
 
@@ -134,23 +140,67 @@ function Invoke-S2DWaterfallCalculation {
     # All stages are theoretical — no stage carries a health status.
     # Reserve adequacy is reported via ReserveStatus on the waterfall object and
     # evaluated in Health Checks (Check 1). It does not belong on a pipeline stage.
-    $driveCount   = if ($LargestDiskSizeBytes -gt 0) { [math]::Round($RawDiskBytes / $LargestDiskSizeBytes) } else { 0 }
-    $infraDisplay = if ($InfraVolumeBytes -gt 0) { "$([math]::Round($InfraVolumeBytes/1073741824,1)) GiB" } else { 'None detected' }
+    $driveCount = if ($LargestDiskSizeBytes -gt 0) { [math]::Round($RawDiskBytes / $LargestDiskSizeBytes) } else { 0 }
+    $infraDisplay = if ($InfraVolumeBytes -gt 0) {
+        "$([math]::Round($InfraVolumeBytes / 1073741824, 1)) GiB / $([math]::Round($InfraVolumeBytes / 1000000000.0, 1)) GB (footprint)"
+    } else { 'None detected' }
+
+    # AB#4645: pre-compute all formatted values to avoid single-quote nesting inside double-quoted strings.
+    # Every description labels (a) decimal TB and binary TiB and (b) footprint vs data/usable space.
+    $TiB = 1099511627776.0
+    $TB  = 1e12
+
+    $drvTB  = [math]::Round($LargestDiskSizeBytes / $TB,  2)
+    $drvTiB = [math]::Round($LargestDiskSizeBytes / $TiB, 2)
+    $s1TB   = [math]::Round($stage1Bytes / $TB,  2)
+    $s1TiB  = [math]::Round($stage1Bytes / $TiB, 2)
+    $ohPct  = [math]::Round($PoolOverheadFraction * 100, 0)
+    $ohDedTB  = [math]::Round(($stage2Bytes - $stage3Bytes) / $TB,  2)
+    $ohDedTiB = [math]::Round(($stage2Bytes - $stage3Bytes) / $TiB, 2)
+    $s3TB   = [math]::Round($stage3Bytes / $TB,  2)
+    $s3TiB  = [math]::Round($stage3Bytes / $TiB, 2)
+    $resCnt = [math]::Min($NodeCount, 4)
+    $resTB  = [math]::Round($reserveBytes / $TB,  2)
+    $resTiB = [math]::Round($reserveBytes / $TiB, 2)
+    $s4TB   = [math]::Round($stage4Bytes / $TB,  2)
+    $s4TiB  = [math]::Round($stage4Bytes / $TiB, 2)
+    $s5TB   = [math]::Round($stage5Bytes / $TB,  2)
+    $s5TiB  = [math]::Round($stage5Bytes / $TiB, 2)
+    $s6TB   = [math]::Round($stage6Bytes / $TB,  2)
+    $s6TiB  = [math]::Round($stage6Bytes / $TiB, 2)
+    $p70TB  = [math]::Round($planningLine70Bytes / $TB,  2)
+    $p70TiB = [math]::Round($planningLine70Bytes / $TiB, 2)
+    $s7TB   = [math]::Round($stage7Bytes / $TB,  2)
+    $s7TiB  = [math]::Round($stage7Bytes / $TiB, 2)
+    $copies = [int]$ResiliencyFactor
+
+    $descS1 = "FOOTPRINT. All pool-member capacity drives. $driveCount x $drvTB TB ($drvTiB TiB) = $s1TB TB / $s1TiB TiB raw."
+    $descS2 = "INFORMATIONAL — no deduction. Vendor labels use decimal TB (1 TB = 10^12 bytes); Windows and PowerShell report binary TiB (1 TiB = 2^40 bytes, approx. 1.0995 x 10^12 bytes). This creates an apparent ~9% gap. Vendor label: $vendorLabeledTB TB."
+    $descS3 = "FOOTPRINT. ~$ohPct% held by the storage pool for internal metadata. Deduction: $ohDedTB TB / $ohDedTiB TiB. Remaining: $s3TB TB / $s3TiB TiB."
+    $descS4 = "FOOTPRINT. Per Microsoft: one capacity drive per server, up to 4 servers. $resCnt x $drvTB TB = $resTB TB / $resTiB TiB held for rebuild. Remaining: $s4TB TB / $s4TiB TiB."
+    $descS5 = "FOOTPRINT. Azure Local system volume pool footprint deducted. $infraDisplay. Remaining: $s5TB TB / $s5TiB TiB."
+    $descS6 = "FOOTPRINT. Pool footprint space available for workload volumes after all deductions. $s6TB TB / $s6TiB TiB. 70% planning line (alert threshold) = $p70TB TB / $p70TiB TiB of available-for-volumes footprint."
+    $descS7 = "DATA (usable). $ResiliencyName writes $copies copies of every byte (footprint / copies = usable data). $s6TB TB / $s6TiB TiB footprint / $copies copies = $s7TB TB / $s7TiB TiB you can actually store.$resiliencyTag"
 
     $stages = @(
-        (New-Stage 1 'Raw Capacity'           $stage1Bytes $stage1Bytes   "All pool-member capacity drives. $driveCount × $('{0:N2}' -f ($LargestDiskSizeBytes/1TB)) TB = $('{0:N2}' -f ($stage1Bytes/1TB)) TB"),
-        (New-Stage 2 'Vendor (TB)'            $stage2Bytes $stage1Bytes   "Informational. Vendor labels use decimal TB; Windows reports binary TiB. Vendor label: $vendorLabeledTB TB. No deduction."),
-        (New-Stage 3 'Pool Overhead'          $stage3Bytes $stage2Bytes   "~$([math]::Round($PoolOverheadFraction*100,0))% held by the storage pool for internal metadata. Deduction: $('{0:N2}' -f (($stage2Bytes-$stage3Bytes)/1TB)) TB"),
-        (New-Stage 4 'Reserve'                $stage4Bytes $stage3Bytes   "Per Microsoft: one drive per server, up to 4 servers. $([math]::Min($NodeCount,4)) × $('{0:N2}' -f ($LargestDiskSizeBytes/1TB)) TB = $('{0:N2}' -f ($reserveBytes/1TB)) TB held for repair."),
-        (New-Stage 5 'Infrastructure Volume'  $stage5Bytes $stage4Bytes   "Azure Local system volume pool footprint deducted. $infraDisplay"),
-        (New-Stage 6 'Available for Volumes'  $stage6Bytes $stage5Bytes   "Pool space remaining for workload volume footprint after all deductions."),
-        (New-Stage 7 'Usable Capacity'        $stage7Bytes $stage6Bytes   "$ResiliencyName writes $([int]$ResiliencyFactor) copies of every byte. $('{0:N2}' -f ($stage6Bytes/1TB)) TB pool ÷ $([int]$ResiliencyFactor) copies = $('{0:N2}' -f ($stage7Bytes/1TB)) TB you can actually store.$resiliencyTag")
+        (New-Stage 1 'Raw Capacity'          $stage1Bytes $stage1Bytes  $descS1),
+        (New-Stage 2 'Vendor (TB)'           $stage2Bytes $stage1Bytes  $descS2),
+        (New-Stage 3 'Pool Overhead'         $stage3Bytes $stage2Bytes  $descS3),
+        (New-Stage 4 'Reserve'               $stage4Bytes $stage3Bytes  $descS4),
+        (New-Stage 5 'Infrastructure Volume' $stage5Bytes $stage4Bytes  $descS5),
+        (New-Stage 6 'Available for Volumes' $stage6Bytes $stage5Bytes  $descS6),
+        (New-Stage 7 'Usable Capacity'       $stage7Bytes $stage6Bytes  $descS7)
     )
 
     $wf = [S2DCapacityWaterfall]::new()
     $wf.Stages                   = $stages
     $wf.RawCapacity              = [S2DCapacity]::new($stage1Bytes)
+    $wf.AvailableForVolumes      = if ($stage6Bytes -gt 0) { [S2DCapacity]::new($stage6Bytes) } else { [S2DCapacity]::new([int64]0) }
     $wf.UsableCapacity           = if ($stage7Bytes -gt 0) { [S2DCapacity]::new($stage7Bytes) } else { [S2DCapacity]::new([int64]0) }
+    # AB#4644: 70% planning line = 70% of AvailableForVolumes on a footprint basis.
+    # This is the threshold the over-allocation alert fires on (compare volume footprint, not usable data).
+    $wf.PlanningLine70Pct        = if ($planningLine70Bytes -gt 0) { [S2DCapacity]::new($planningLine70Bytes) } else { [S2DCapacity]::new([int64]0) }
+    $wf.IsAbove70PctLine         = $false   # caller sets this against actual consumed footprint
     $wf.ReserveRecommended       = $reserveCalc.ReserveRecommended
     $wf.ReserveActual            = $reserveCalc.ReserveActual
     $wf.ReserveStatus            = $reserveCalc.Status

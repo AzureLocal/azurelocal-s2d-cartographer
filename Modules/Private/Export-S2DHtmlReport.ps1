@@ -28,23 +28,58 @@ function Export-S2DHtmlReport {
     $overallFg = switch ($oh) { 'Healthy'{'#107c10'} 'Warning'{'#d47a00'} 'Critical'{'#d13438'} default{'#323130'} }
 
     # ── Waterfall chart data ──────────────────────────────────────────────────
-    $wfLabels   = ''
-    $wfValues   = ''
-    $wfDescRows = ''
+    $wfLabels       = ''
+    $wfValues       = ''
+    $wfDescRows     = ''
+    $wf70LineTiB    = 0
+    $wf70LineTB     = 0
+    $wfAbove70Flag  = $false
     if ($wf) {
         $wfLabels = ($wf.Stages | ForEach-Object { "'Stage $($_.Stage): $($_.Name)'" }) -join ','
         $wfValues = ($wf.Stages | ForEach-Object { if ($_.Size) { [math]::Round($_.Size.TiB, 2) } else { 0 } }) -join ','
-        # Capacity Model is a theoretical pipeline — all stages get a neutral info icon
-        # and all deltas are grey. Pass/Warn/Fail state belongs in Health Checks, not here.
+
+        # AB#4644: 70% planning line values for chart annotation
+        if ($wf.PlanningLine70Pct) {
+            $wf70LineTiB   = [math]::Round($wf.PlanningLine70Pct.TiB, 2)
+            $wf70LineTB    = [math]::Round($wf.PlanningLine70Pct.TB,  2)
+            $wfAbove70Flag = $wf.IsAbove70PctLine
+        }
+
+        # AB#4645: waterfall table rows — show both TB and TiB for remaining and delta;
+        # label each stage as FOOTPRINT or DATA (usable). The Description field (from
+        # Invoke-S2DWaterfallCalculation) now carries the full dual-unit breakdown.
         $wfDescRows = ($wf.Stages | ForEach-Object {
             $icon      = '<span style="color:#0078d4;font-size:14px">&#x2192;</span>'
             $deltaStr  = if ($_.Delta -and [math]::Abs($_.Delta.TB) -gt 0) {
-                "<span style='color:#a19f9d;font-size:12px'>&#x2212;$([math]::Round($_.Delta.TB,2)) TB</span>"
+                $dTB  = [math]::Round($_.Delta.TB,  2)
+                $dTiB = [math]::Round($_.Delta.TiB, 2)
+                "<span style='color:#a19f9d;font-size:12px'>&#x2212;$dTB TB / $dTiB TiB</span>"
             } else {
                 "<span style='color:#a19f9d;font-size:11px'>&#x2014;</span>"
             }
-            $remaining = if ($_.Size) { "$([math]::Round($_.Size.TB,2)) TB" } else { '0 TB' }
-            "<tr><td style='width:28px;text-align:center;padding:6px 4px'>$icon</td><td style='width:24px;font-weight:700;color:#0078d4;padding:6px 8px'>$($_.Stage)</td><td style='font-weight:600;padding:6px 8px;white-space:nowrap'>$($_.Name)</td><td style='text-align:right;color:#a19f9d;padding:6px 8px;white-space:nowrap;font-size:12px'>$deltaStr</td><td style='color:#605e5c;padding:6px 8px;font-size:12px'>$($_.Description)</td><td style='text-align:right;font-weight:600;padding:6px 8px;white-space:nowrap'>$remaining</td></tr>"
+            # AB#4645: remaining shows TB (decimal) and TiB (binary) — both units, unambiguous
+            $remTB  = if ($_.Size) { [math]::Round($_.Size.TB,  2) } else { 0 }
+            $remTiB = if ($_.Size) { [math]::Round($_.Size.TiB, 2) } else { 0 }
+            # AB#4645: space-type badge — footprint vs data
+            $spaceBadge = if ($_.Stage -eq 7) {
+                "<span style='font-size:10px;background:#dff6dd;color:#107c10;border-radius:3px;padding:1px 5px;margin-left:4px'>DATA</span>"
+            } else {
+                "<span style='font-size:10px;background:#eff6fc;color:#0078d4;border-radius:3px;padding:1px 5px;margin-left:4px'>FOOTPRINT</span>"
+            }
+            $stageRow = "<tr><td style='width:28px;text-align:center;padding:6px 4px'>$icon</td><td style='width:24px;font-weight:700;color:#0078d4;padding:6px 8px'>$($_.Stage)</td><td style='font-weight:600;padding:6px 8px;white-space:nowrap'>$($_.Name)$spaceBadge</td><td style='text-align:right;color:#a19f9d;padding:6px 8px;white-space:nowrap;font-size:12px'>$deltaStr</td><td style='color:#605e5c;padding:6px 8px;font-size:12px'>$($_.Description)</td><td style='text-align:right;font-weight:600;padding:6px 8px;white-space:nowrap'>$remTB TB<br><span style='font-size:11px;color:#605e5c;font-weight:400'>$remTiB TiB</span></td></tr>"
+            # AB#4644: inject 70% line row after Stage 6 (Available for Volumes)
+            if ($_.Stage -eq 6 -and $wf.PlanningLine70Pct -and $wf.PlanningLine70Pct.Bytes -gt 0) {
+                $lineTB  = [math]::Round($wf.PlanningLine70Pct.TB,  2)
+                $lineTiB = [math]::Round($wf.PlanningLine70Pct.TiB, 2)
+                $alertStyle = if ($wfAbove70Flag) { "background:#fff4ce" } else { "background:#faf9f8" }
+                $alertBadge = if ($wfAbove70Flag) {
+                    "<span style='font-size:10px;background:#fff4ce;color:#d47a00;border-radius:3px;padding:1px 5px;margin-left:6px;font-weight:700'>ALERT: above 70% line</span>"
+                } else { '' }
+                $lineRow = "<tr style='$alertStyle'><td style='text-align:center;padding:6px 4px'><span style='color:#e8a218;font-size:14px'>&#x25BA;</span></td><td style='font-weight:700;color:#e8a218;padding:6px 8px'>70%</td><td style='font-weight:600;padding:6px 8px;color:#e8a218;white-space:nowrap'>Planning Line$alertBadge</td><td></td><td style='color:#605e5c;padding:6px 8px;font-size:12px'>70% of available-for-volumes (footprint basis). Workload volume footprint should not exceed this threshold. Compare against pool footprint consumed by workload volumes — not usable data size.</td><td style='text-align:right;font-weight:600;padding:6px 8px;white-space:nowrap;color:#e8a218'>$lineTB TB<br><span style='font-size:11px;color:#a19f9d;font-weight:400'>$lineTiB TiB</span></td></tr>"
+                "$stageRow`n$lineRow"
+            } else {
+                $stageRow
+            }
         }) -join "`n"
     }
 
@@ -140,7 +175,8 @@ function Export-S2DHtmlReport {
     } else { '<p>Cache data not available.</p>' }
 
     $poolSummary = if ($pool) {
-        "<p><strong>Pool:</strong> $($pool.FriendlyName) &nbsp; <strong>Health:</strong> $($pool.HealthStatus) &nbsp; <strong>Total:</strong> $($pool.TotalSize.TiB) TiB &nbsp; <strong>Allocated:</strong> $($pool.AllocatedSize.TiB) TiB &nbsp; <strong>Free:</strong> $($pool.RemainingSize.TiB) TiB &nbsp; <strong>Overcommit:</strong> $($pool.OvercommitRatio)x</p>"
+        # AB#4645: show both TiB (binary, Windows-reported) and TB (decimal, vendor label) for every pool figure
+        "<p><strong>Pool:</strong> $($pool.FriendlyName) &nbsp; <strong>Health:</strong> $($pool.HealthStatus) &nbsp; <strong>Total:</strong> $($pool.TotalSize.TiB) TiB / $($pool.TotalSize.TB) TB &nbsp; <strong>Allocated:</strong> $($pool.AllocatedSize.TiB) TiB / $($pool.AllocatedSize.TB) TB &nbsp; <strong>Free:</strong> $($pool.RemainingSize.TiB) TiB / $($pool.RemainingSize.TB) TB &nbsp; <strong>Overcommit:</strong> $($pool.OvercommitRatio)x</p>"
     } else { '<p>Pool data not available.</p>' }
 
     $html = @"
@@ -166,6 +202,7 @@ header .meta{font-size:12px;opacity:.85;text-align:right}
 .kpi .val{font-size:22px;font-weight:700;color:var(--blue)}
 .kpi .lbl{font-size:11px;color:var(--muted);margin-top:4px}
 .kpi.critical{background:#fde7e9;border-color:#d13438}.kpi.critical .val{color:#d13438}.kpi.critical .lbl{color:#d13438}
+.kpi.warn{background:#fff4ce;border-color:#e8a218}.kpi.warn .val{color:#d47a00}.kpi.warn .lbl{color:#d47a00}
 .health-banner{border-radius:6px;padding:12px 20px;margin-bottom:16px;font-weight:600;font-size:15px;background:$overallBg;color:$overallFg}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#f3f2f1;text-align:left;padding:8px 10px;font-weight:600;border-bottom:2px solid var(--border)}
@@ -202,9 +239,11 @@ tr:hover{background:#f3f2f1}
   <div class="health-banner">Overall Health: $oh</div>
   <div class="overview-grid">
     <div class="kpi"><div class="val">$nc</div><div class="lbl">Nodes</div></div>
-    <div class="kpi"><div class="val">$(if($wf){"$($wf.RawCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Raw Capacity</div></div>
-    <div class="kpi"><div class="val">$(if($wf){"$($wf.UsableCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Usable Capacity</div></div>
-    <div class="kpi"><div class="val">$(if($pool){"$($pool.RemainingSize.TiB) TiB"}else{'N/A'})</div><div class="lbl">Pool Free</div></div>
+    <div class="kpi"><div class="val">$(if($wf){"$($wf.RawCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Raw Capacity (binary)</div></div>
+    <div class="kpi"><div class="val">$(if($wf){"$($wf.AvailableForVolumes.TiB) TiB"}else{'N/A'})</div><div class="lbl">Avail for Volumes — footprint</div></div>
+    <div class="kpi"><div class="val">$(if($wf){"$($wf.UsableCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Usable Data — after resiliency</div></div>
+    <div class="kpi$(if($wf -and $wf.IsAbove70PctLine){' warn'}else{''})"><div class="val">$(if($wf -and $wf.PlanningLine70Pct){"$($wf.PlanningLine70Pct.TiB) TiB"}else{'N/A'})</div><div class="lbl">70% Planning Line — footprint</div></div>
+    <div class="kpi"><div class="val">$(if($pool){"$($pool.RemainingSize.TiB) TiB"}else{'N/A'})</div><div class="lbl">Pool Free (binary)</div></div>
     <div class="kpi"><div class="val">$($disks.Count)</div><div class="lbl">Physical Disks</div></div>
     <div class="kpi"><div class="val">$(@($vols | Where-Object { -not $_.IsInfrastructureVolume }).Count)</div><div class="lbl">Workload Volumes</div></div>
     <div class="kpi$(if($wf -and $wf.ReserveStatus -eq 'Critical'){' critical'}else{''})"><div class="val">$(if($wf){"$($wf.ReserveStatus)"}else{'N/A'})</div><div class="lbl">Reserve Status</div></div>
@@ -280,10 +319,39 @@ tr:hover{background:#f3f2f1}
 
 </div>
 <script>
-const tibValues = [$wfValues];
-const tbValues  = tibValues.map(v => Math.round(v * 1.0995 * 100) / 100);
-const labels    = [$wfLabels];
+const tibValues        = [$wfValues];
+const tbValues         = tibValues.map(v => Math.round(v * 1.0995 * 100) / 100);
+const labels           = [$wfLabels];
+// AB#4644: 70% planning line — 70% of Available-for-Volumes (footprint basis)
+const planLine70TiB    = $wf70LineTiB;
+const planLine70TB     = $wf70LineTB;
+const above70PctLine   = $($wfAbove70Flag.ToString().ToLower());
 let useTiB = true;
+
+// AB#4644: chart plugin that draws the 70% planning line on the waterfall chart
+const waterfallPlanLinePlugin = {
+  id: 'waterfallPlanLine',
+  afterDraw(chart) {
+    const lineVal = useTiB ? planLine70TiB : planLine70TB;
+    if (!lineVal) return;
+    const ctx = chart.ctx, xScale = chart.scales.x;
+    const px  = xScale.getPixelForValue(lineVal);
+    ctx.save();
+    ctx.strokeStyle = above70PctLine ? '#d13438' : '#e8a218';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(px, chart.chartArea.top - 4);
+    ctx.lineTo(px, chart.chartArea.bottom + 4);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = above70PctLine ? '#d13438' : '#e8a218';
+    ctx.font = 'bold 11px Segoe UI,Arial,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('70% of avail-for-vols' + (above70PctLine ? ' ⚠' : ''), px, chart.chartArea.top - 8);
+    ctx.restore();
+  }
+};
 
 const ctx = document.getElementById('waterfallChart').getContext('2d');
 const chart = new Chart(ctx, {
@@ -302,7 +370,8 @@ const chart = new Chart(ctx, {
     indexAxis: 'y',
     plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw + (useTiB ? ' TiB' : ' TB') } } },
     scales: { x: { beginAtZero: true, title: { display: true, text: 'TiB' } } }
-  }
+  },
+  plugins: [waterfallPlanLinePlugin]
 });
 
 function toggleUnit() {

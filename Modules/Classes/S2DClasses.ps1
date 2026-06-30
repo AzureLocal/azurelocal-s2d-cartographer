@@ -70,7 +70,10 @@ class S2DWaterfallStage {
 class S2DCapacityWaterfall {
     [S2DWaterfallStage[]] $Stages
     [S2DCapacity]  $RawCapacity
-    [S2DCapacity]  $UsableCapacity
+    [S2DCapacity]  $AvailableForVolumes   # Stage 6 — footprint space available for workload volumes
+    [S2DCapacity]  $UsableCapacity        # Stage 7 — data (usable) space after resiliency overhead
+    [S2DCapacity]  $PlanningLine70Pct     # 70% of AvailableForVolumes (footprint basis — alert threshold)
+    [bool]         $IsAbove70PctLine      # true when consumed/planned footprint exceeds the 70% line
     [S2DCapacity]  $ReserveRecommended
     [S2DCapacity]  $ReserveActual
     [string]       $ReserveStatus
