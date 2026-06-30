@@ -164,6 +164,34 @@ function Export-S2DHtmlReport {
         "<tr><td>$($_.FriendlyName)$infraTag</td><td>$($_.ResiliencySettingName) ($($_.NumberOfDataCopies) copies)</td><td>$(if($_.Size){"$($_.Size.TiB) TiB"}else{'N/A'})</td><td>$(if($_.FootprintOnPool){"$($_.FootprintOnPool.TiB) TiB"}else{'N/A'})</td><td>$($_.EfficiencyPercent)%</td><td>$($_.ProvisioningType)</td>$thinCells<td>$hs</td></tr>"
     }) -join "`n"
 
+    # ── Maintenance reserve assessment indicator ──────────────────────────────
+    # DEFENSIVE: every property access is guarded; $null assessment skips the section.
+    $mraSectionHtml = ''
+    $mra = $ClusterData.MaintenanceReserveAssessment
+    if ($mra -and $mra.Status -ne 'Unknown') {
+        $mraStatusColor  = if ($mra.Meets) { '#107c10' } else { '#d47a00' }
+        $mraStatusBg     = if ($mra.Meets) { '#dff6dd' } else { '#fff4ce' }
+        $mraStatusText   = if ($mra.Meets) { 'Meets' } else { 'Does not meet' }
+        $mraTargetLabel  = if ($mra.Target) { [string]$mra.Target } else { 'N+1' }
+        $mraReqTB        = if ($mra.RequiredCapacity)  { [math]::Round($mra.RequiredCapacity.TB,  2) }  else { 'N/A' }
+        $mraReqTiB       = if ($mra.RequiredCapacity)  { [math]::Round($mra.RequiredCapacity.TiB, 2) }  else { 'N/A' }
+        $mraAvTB         = if ($mra.AvailableHeadroom) { [math]::Round($mra.AvailableHeadroom.TB,  2) } else { 'N/A' }
+        $mraAvTiB        = if ($mra.AvailableHeadroom) { [math]::Round($mra.AvailableHeadroom.TiB, 2) } else { 'N/A' }
+        $mraNoteHtml     = if ($mra.Note) { "<p style='font-size:12px;color:#605e5c;margin-top:8px'>$([System.Net.WebUtility]::HtmlEncode([string]$mra.Note))</p>" } else { '' }
+        $mraSectionHtml  = @"
+<div class='section'>
+  <h2>Maintenance Reserve ($mraTargetLabel)</h2>
+  <p style='margin-bottom:12px;font-size:12px;color:var(--muted)'>Microsoft WAF recommends holding at least one node's worth of capacity beyond the rebuild reserve so that a node can be fully drained for patching without starving the pool. This is advisory — separate from and additive to the rebuild reserve.</p>
+  <div class='overview-grid' style='max-width:640px'>
+    <div class='kpi' style='background:$mraStatusBg;border-color:$mraStatusColor'><div class='val' style='color:$mraStatusColor'>$mraStatusText</div><div class='lbl'>$mraTargetLabel Status</div></div>
+    <div class='kpi'><div class='val'>$mraReqTB TB</div><div class='lbl'>Required ($mraReqTiB TiB)</div></div>
+    <div class='kpi'><div class='val'>$mraAvTB TB</div><div class='lbl'>Available Headroom ($mraAvTiB TiB)</div></div>
+  </div>
+  $mraNoteHtml
+</div>
+"@
+    }
+
     # ── Expansion headroom table + chart data ────────────────────────────────
     $eh = $ClusterData.ExpansionHeadroom
     $ehCurrentPct   = if ($eh) { $eh.CurrentUtilizationPct } else { 0 }
@@ -340,6 +368,8 @@ tr:hover{background:#f3f2f1}
   </table>
   <div style="position:relative;height:220px"><canvas id="ehChart"></canvas></div>
 </div>
+
+$mraSectionHtml
 
 <div class="section">
   <h2>Health Checks</h2>

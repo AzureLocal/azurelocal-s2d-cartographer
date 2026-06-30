@@ -144,6 +144,10 @@ function Invoke-S2DCartographer {
         [string] $Company = '',
 
         [Parameter()]
+        [ValidateSet('None', 'N+1', 'N+2')]
+        [string] $MaintenanceReserveTarget = 'N+1',
+
+        [Parameter()]
         [switch] $PassThru
     )
 
@@ -177,7 +181,7 @@ function Invoke-S2DCartographer {
 
     try {
         Write-Log "S2DCartographer run started. PSVersion=$($PSVersionTable.PSVersion) Platform=$($PSVersionTable.Platform)"
-        Write-Log "Parameters: Format=$($Format -join ',') IncludeDiagrams=$IncludeDiagrams SkipHealthChecks=$SkipHealthChecks"
+        Write-Log "Parameters: Format=$($Format -join ',') IncludeDiagrams=$IncludeDiagrams SkipHealthChecks=$SkipHealthChecks MaintenanceReserveTarget=$MaintenanceReserveTarget"
 
         # ── Step 1: Connect ───────────────────────────────────────────────────
         # Build splat for Connect-S2DCluster with strict parameter-set discipline.
@@ -296,6 +300,22 @@ function Invoke-S2DCartographer {
         } else { $null }
         if ($clusterData.ExpansionHeadroom) {
             Write-Log "Expansion headroom: util=$($clusterData.ExpansionHeadroom.CurrentUtilizationPct)% copies=$($clusterData.ExpansionHeadroom.PrevalentDataCopies)"
+        }
+
+        # Maintenance reserve assessment — optional N+1/N+2 compliance check (read-only)
+        Write-Log "Computing maintenance reserve assessment (target=$MaintenanceReserveTarget)..."
+        $clusterData.MaintenanceReserveAssessment = if ($waterfall -and $pool -and $physDisks.Count -gt 0) {
+            $poolFreeBytes    = if ($pool.RemainingSize) { [int64]$pool.RemainingSize.Bytes } else { [int64]0 }
+            $reserveRecdBytes = if ($waterfall.ReserveRecommended) { [int64]$waterfall.ReserveRecommended.Bytes } else { [int64]0 }
+            Get-S2DMaintenanceReserveAssessment `
+                -PoolFreeBytes                 $poolFreeBytes `
+                -RebuildReserveRecommendedBytes $reserveRecdBytes `
+                -PhysicalDisks                 $physDisks `
+                -NodeCount                     $clusterData.NodeCount `
+                -Target                        $MaintenanceReserveTarget
+        } else { $null }
+        if ($clusterData.MaintenanceReserveAssessment) {
+            Write-Log "Maintenance reserve: target=$($clusterData.MaintenanceReserveAssessment.Target) status=$($clusterData.MaintenanceReserveAssessment.Status) meets=$($clusterData.MaintenanceReserveAssessment.Meets)"
         }
 
         # ── Step 4: Generate reports ──────────────────────────────────────────

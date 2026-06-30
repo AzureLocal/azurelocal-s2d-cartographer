@@ -434,6 +434,35 @@ $($drows -join '')
     }
     $body += PageBreak
 
+    # Maintenance Reserve Assessment
+    # DEFENSIVE: every property access is guarded — null assessment skips the section.
+    $mraData = $ClusterData.MaintenanceReserveAssessment
+    if ($null -ne $mraData -and $mraData.Status -ne 'Unknown') {
+        $mraTargetLabel = if ($mraData.Target) { [string]$mraData.Target } else { 'N+1' }
+        $body += SectionHeader "Maintenance Reserve ($mraTargetLabel)"
+        $body += Spacer
+        $mraStatusText = if ($null -ne $mraData.Meets -and $mraData.Meets) { 'Meets' } else { 'Does not meet' }
+        $mraKpiStatus  = if ($null -ne $mraData.Meets -and $mraData.Meets) { 'Pass' } else { 'Warn' }
+        $mraReqVal     = if ($mraData.RequiredCapacity)  { "$([math]::Round($mraData.RequiredCapacity.TB,  2)) TB / $([math]::Round($mraData.RequiredCapacity.TiB,  2)) TiB" }  else { 'N/A' }
+        $mraAvVal      = if ($mraData.AvailableHeadroom) { "$([math]::Round($mraData.AvailableHeadroom.TB, 2)) TB / $([math]::Round($mraData.AvailableHeadroom.TiB, 2)) TiB" } else { 'N/A' }
+        $body += KpiTable @(
+            @{ label = "$mraTargetLabel Status"; value = $mraStatusText; status = $mraKpiStatus }
+            @{ label = 'Required Capacity';      value = $mraReqVal;     status = 'neutral' }
+            @{ label = 'Available Headroom';     value = $mraAvVal;      status = 'neutral' }
+        )
+        $body += Spacer
+        $body += Para 'Microsoft WAF recommends holding at least one node''s worth of raw capacity beyond the rebuild reserve so that a node can be fully drained for patching without exhausting pool free space. This is advisory — separate from and additive to the rebuild reserve.' `
+            -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 80
+        if ($mraData.Note) {
+            $body += Para ([string]$mraData.Note) -sz 20 -color '605E5C' -spaceBefore 20 -spaceAfter 60
+        }
+        if (-not ($null -ne $mraData.Meets -and $mraData.Meets)) {
+            $body += Para 'Remediation: Free pool space by shrinking or removing volumes, or add capacity drives to increase available headroom.' `
+                -sz 20 -bold $true -color '835B00' -spaceBefore 40 -spaceAfter 60
+        }
+        $body += PageBreak
+    }
+
     # Health Assessment
     $body += SectionHeader 'Health Assessment'
     $body += Spacer

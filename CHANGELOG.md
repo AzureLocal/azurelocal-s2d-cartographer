@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-06-30
+
+### Added
+
+- **Maintenance reserve (N+1) assessment** — reports whether the scanned cluster currently has enough free
+  capacity (beyond the rebuild reserve) to drain a node for updates, per Microsoft's Well-Architected
+  guidance. Surfaced as a new `MaintenanceReserveN1` health check and a report indicator (Meets / Does not
+  meet, with the required vs available headroom in TB and TiB). Configurable target via
+  `-MaintenanceReserveTarget None|N+1|N+2` (default N+1). This is **assessment only** — it does not change
+  any measured capacity number. On two-node two-way-mirror clusters it notes that each node already holds a
+  full copy, so a drained node keeps data available.
+
 ## [1.7.1] — 2026-06-30
 
 ### Added

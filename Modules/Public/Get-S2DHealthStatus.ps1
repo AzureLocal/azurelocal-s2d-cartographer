@@ -366,6 +366,51 @@ function Get-S2DHealthStatus {
     }
     $checks += $check11
 
+    # ── Check 12: Maintenance reserve (N+1) ──────────────────────────────────
+    # Surfaces the MaintenanceReserveAssessment already computed on the session,
+    # or runs a fresh assessment if not available. Severity 'Info' when Meets,
+    # 'Warning' when Does not meet. This is advisory — WAF best practice, not
+    # a hard S2D requirement.
+    $mra = $Script:S2DSession.CollectedData['MaintenanceReserveAssessment']
+    $check12 = if (-not $mra) {
+        # Assessment not pre-computed — try to compute it now from available data
+        $mraPhysDisks  = @($physDisks | Where-Object { $_.Role -eq 'Capacity' -and $_.IsPoolMember -ne $false })
+        $mraPoolFree   = if ($pool -and $pool.RemainingSize)  { [int64]$pool.RemainingSize.Bytes }  else { [int64]0 }
+        $mraReserveRcd = if ($waterfall -and $waterfall.ReserveRecommended) { [int64]$waterfall.ReserveRecommended.Bytes } else { [int64]0 }
+
+        if ($mraPhysDisks.Count -gt 0 -and $mraPoolFree -gt 0) {
+            $mra = Get-S2DMaintenanceReserveAssessment `
+                -PoolFreeBytes                 $mraPoolFree `
+                -RebuildReserveRecommendedBytes $mraReserveRcd `
+                -PhysicalDisks                 @($physDisks) `
+                -NodeCount                     $nodeCount `
+                -Target                        'N+1'
+        }
+
+        if ($mra -and $mra.Status -ne 'Unknown') {
+            $mraStatus = if ($mra.Meets) { 'Pass' } else { 'Warn' }
+            $mraSeverity = if ($mra.Meets) { 'Info' } else { 'Warning' }
+            $mraReqTB  = if ($mra.RequiredCapacity)  { "$([math]::Round($mra.RequiredCapacity.TB,  2)) TB / $([math]::Round($mra.RequiredCapacity.TiB,  2)) TiB" }  else { 'N/A' }
+            $mraAvTB   = if ($mra.AvailableHeadroom) { "$([math]::Round($mra.AvailableHeadroom.TB, 2)) TB / $([math]::Round($mra.AvailableHeadroom.TiB, 2)) TiB" } else { 'N/A' }
+            New-HealthCheck 'MaintenanceReserveN1' $mraSeverity $mraStatus `
+                "Maintenance reserve ($($mra.Target)): $($mra.Status). Required: $mraReqTB. Available headroom (free after rebuild reserve): $mraAvTB." `
+                $(if ($mra.Meets) { 'No action required. Cluster has sufficient headroom to drain a node for maintenance.' } else { 'Free pool space after rebuild reserve is insufficient to maintain N+1 maintenance headroom. Consider shrinking volumes, removing snapshots, or adding capacity drives.' })
+        } else {
+            New-HealthCheck 'MaintenanceReserveN1' 'Info' 'Pass' `
+                "Maintenance reserve assessment skipped — insufficient data (no pool-member capacity disks or pool free space unavailable)." `
+                "Run Get-S2DPhysicalDiskInventory and Get-S2DCapacityWaterfall first."
+        }
+    } else {
+        $mraStatus = if ($mra.Meets) { 'Pass' } else { 'Warn' }
+        $mraSeverity = if ($mra.Meets) { 'Info' } else { 'Warning' }
+        $mraReqTB  = if ($mra.RequiredCapacity)  { "$([math]::Round($mra.RequiredCapacity.TB,  2)) TB / $([math]::Round($mra.RequiredCapacity.TiB,  2)) TiB" }  else { 'N/A' }
+        $mraAvTB   = if ($mra.AvailableHeadroom) { "$([math]::Round($mra.AvailableHeadroom.TB, 2)) TB / $([math]::Round($mra.AvailableHeadroom.TiB, 2)) TiB" } else { 'N/A' }
+        New-HealthCheck 'MaintenanceReserveN1' $mraSeverity $mraStatus `
+            "Maintenance reserve ($($mra.Target)): $($mra.Status). Required: $mraReqTB. Available headroom (free after rebuild reserve): $mraAvTB." `
+            $(if ($mra.Meets) { 'No action required. Cluster has sufficient headroom to drain a node for maintenance.' } else { 'Free pool space after rebuild reserve is insufficient to maintain N+1 maintenance headroom. Consider shrinking volumes, removing snapshots, or adding capacity drives.' })
+    }
+    $checks += $check12
+
     # ── Filter by CheckName ───────────────────────────────────────────────────
     $result = if ($CheckName) {
         @($checks | Where-Object { $_.CheckName -in $CheckName })

@@ -92,10 +92,10 @@ Describe 'Get-S2DHealthStatus' {
     }
 
     Context 'Output shape' {
-        It 'returns exactly 11 S2DHealthCheck objects on a healthy cluster' {
+        It 'returns exactly 12 S2DHealthCheck objects on a healthy cluster' {
             InModuleScope S2DCartographer {
                 $result = Get-S2DHealthStatus
-                $result.Count | Should -Be 11
+                $result.Count | Should -Be 12
                 $result | ForEach-Object { $_.GetType().Name | Should -Be 'S2DHealthCheck' }
             }
         }

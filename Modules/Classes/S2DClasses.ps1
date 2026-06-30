@@ -99,4 +99,8 @@ class S2DClusterData {
     # Expansion headroom — how much room remains at 70/80/90/100% fill thresholds.
     # Populated by Get-S2DExpansionHeadroom after the waterfall and volume collection.
     [object]               $ExpansionHeadroom
+    # Maintenance reserve assessment — N+1/N+2 compliance check (optional, read-only).
+    # Populated by Get-S2DMaintenanceReserveAssessment after the waterfall is computed.
+    # $null when -MaintenanceReserveTarget = 'None' is not set and data is unavailable.
+    [object]               $MaintenanceReserveAssessment
 }
