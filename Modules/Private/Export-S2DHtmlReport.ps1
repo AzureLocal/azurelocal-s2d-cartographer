@@ -170,6 +170,18 @@ function Export-S2DHtmlReport {
         $thinKpiHtml = "<div class='kpi$thinKpiClass' $thinKpiStyle><div class='val'>$thinRiskPct%</div><div class='lbl'>Thin Provision Risk</div></div>"
     }
 
+    # ── 70% line KPI (Executive Summary) ──────────────────────────────────────
+    # The 70% line is a thin-provisioning headroom guideline, NOT a current-health metric and NOT a
+    # Microsoft hard limit. Surface it in the Executive Summary health band ONLY when thin volumes are
+    # present (where a full pool takes thin volumes offline). For fixed-provisioned clusters the figure
+    # still lives in the Capacity Model waterfall + headroom table below — it just no longer competes
+    # with health signals up top.
+    $kpi70Html = ''
+    if ($hasThinVolumes -and $wf -and $wf.PlanningLine70Pct) {
+        $kpi70Cls  = if ($wf.IsAbove70PctLine) { ' warn' } else { '' }
+        $kpi70Html = "<div class='kpi$kpi70Cls'><div class='val'>$($wf.PlanningLine70Pct.TiB) TiB</div><div class='lbl'>70% Planning Line — footprint</div></div>"
+    }
+
     # ── Volume table rows ─────────────────────────────────────────────────────
     $volRows = ($vols | ForEach-Object {
         $infraTag = if ($_.IsInfrastructureVolume) { ' <span class="badge info">Infra</span>' } else { '' }
@@ -182,29 +194,12 @@ function Export-S2DHtmlReport {
         "<tr><td>$($_.FriendlyName)$infraTag</td><td>$($_.ResiliencySettingName) ($($_.NumberOfDataCopies) copies)</td><td>$(if($_.Size){"$($_.Size.TiB) TiB"}else{'N/A'})</td><td>$(if($_.FootprintOnPool){"$($_.FootprintOnPool.TiB) TiB"}else{'N/A'})</td><td>$($_.EfficiencyPercent)%</td><td>$($_.ProvisioningType)</td>$thinCells<td>$hs</td></tr>"
     }) -join "`n"
 
-    # ── Compute maintenance reserve context note (INFORMATIONAL ONLY) ────────
-    # DEFENSIVE: every property access is guarded; $null assessment skips the section.
-    # N+1/N+2 is a COMPUTE resiliency concept — not a storage-pool requirement.
-    # This section shows largest-node context only; no storage pass/fail styling.
-    $mraSectionHtml = ''
-    $mra = $ClusterData.MaintenanceReserveAssessment
-    if ($mra -and $mra.Status -ne 'Unknown') {
-        $mraTargetLabel  = if ($mra.Target) { [string]$mra.Target } else { 'N+1' }
-        $mraNodeTB       = if ($mra.LargestNodeCapacity) { [math]::Round($mra.LargestNodeCapacity.TB,  2) } else { 'N/A' }
-        $mraNodeTiB      = if ($mra.LargestNodeCapacity) { [math]::Round($mra.LargestNodeCapacity.TiB, 2) } else { 'N/A' }
-        $mraNoteHtml     = if ($mra.Note) { "<p style='font-size:12px;color:#605e5c;margin-top:8px'>$([System.Net.WebUtility]::HtmlEncode([string]$mra.Note))</p>" } else { '' }
-        $mraSectionHtml  = @"
-<div class='section'>
-  <h2>Compute Maintenance Reserve Context ($mraTargetLabel) — Advisory</h2>
-  <p style='margin-bottom:12px;font-size:12px;color:var(--muted)'><strong>N+1/N+2 is a COMPUTE resiliency target</strong> — reserve one or two nodes' worth of CPU + RAM so a node can be drained for updates or lost without dropping VMs. Microsoft WAF scopes this to compute and lists it separately from storage. It is not a storage-pool reserve. The firm storage reserves are the per-drive rebuild reserve and keeping volume footprints within the pool (see Health Checks).</p>
-  <div class='overview-grid' style='max-width:480px'>
-    <div class='kpi'><div class='val'>$mraNodeTB TB</div><div class='lbl'>Largest node raw storage ($mraNodeTiB TiB)</div></div>
-    <div class='kpi' style='background:#eff6fc;border-color:#0078d4'><div class='val' style='color:#0078d4'>Advisory</div><div class='lbl'>$mraTargetLabel — compute context only</div></div>
-  </div>
-  $mraNoteHtml
-</div>
-"@
-    }
+    # Compute Maintenance Reserve (N+1/N+2) context box removed from the HTML report (v1.9.1):
+    # N+1/N+2 is a COMPUTE resiliency concept (reserve a node's worth of CPU+RAM for maintenance),
+    # not a storage figure, so it added no value to a storage-capacity audit and confused readers —
+    # half the box was spent explaining why it is NOT a storage reserve. The MaintenanceReserveN1
+    # health check (Info severity) still carries the advisory in Health Checks, and the
+    # MaintenanceReserveAssessment object remains on $ClusterData for Surveyor's planning deductions.
 
     # ── Expansion headroom table + chart data ────────────────────────────────
     $eh = $ClusterData.ExpansionHeadroom
@@ -262,8 +257,17 @@ function Export-S2DHtmlReport {
     } else { '<p>Cache data not available.</p>' }
 
     $poolSummary = if ($pool) {
-        # AB#4645: show both TiB (binary, Windows-reported) and TB (decimal, vendor label) for every pool figure
-        "<p><strong>Pool:</strong> $($pool.FriendlyName) &nbsp; <strong>Health:</strong> $($pool.HealthStatus) &nbsp; <strong>Total:</strong> $($pool.TotalSize.TiB) TiB / $($pool.TotalSize.TB) TB &nbsp; <strong>Allocated:</strong> $($pool.AllocatedSize.TiB) TiB / $($pool.AllocatedSize.TB) TB &nbsp; <strong>Free:</strong> $($pool.RemainingSize.TiB) TiB / $($pool.RemainingSize.TB) TB &nbsp; <strong>Overcommit:</strong> $($pool.OvercommitRatio)x</p>"
+        # AB#4645: show both TiB (binary, Windows-reported) and TB (decimal, vendor label) for every pool figure.
+        # "Overcommit" only applies when provisioned capacity exceeds the pool total (ratio > 1.0x) — the
+        # thin-provisioning case where writes can fail. Below 1.0x the pool is UNDER-committed; printing
+        # "Overcommit: 0.24x" on a healthy, lightly-provisioned pool reads as a false alarm. Show a neutral
+        # provisioning percentage instead, and flag (red) only genuine overcommit.
+        $provDisplay = if ($pool.OvercommitRatio -gt 1.0) {
+            "<strong style='color:var(--red)'>Overcommit:</strong> $($pool.OvercommitRatio)x"
+        } else {
+            "<strong>Provisioned:</strong> $([math]::Round($pool.OvercommitRatio * 100, 1))% of pool <span style='color:var(--green)'>(within capacity)</span>"
+        }
+        "<p><strong>Pool:</strong> $($pool.FriendlyName) &nbsp; <strong>Health:</strong> $($pool.HealthStatus) &nbsp; <strong>Total:</strong> $($pool.TotalSize.TiB) TiB / $($pool.TotalSize.TB) TB &nbsp; <strong>Allocated:</strong> $($pool.AllocatedSize.TiB) TiB / $($pool.AllocatedSize.TB) TB &nbsp; <strong>Free:</strong> $($pool.RemainingSize.TiB) TiB / $($pool.RemainingSize.TB) TB &nbsp; $provDisplay</p>"
     } else { '<p>Pool data not available.</p>' }
 
     $html = @"
@@ -329,7 +333,7 @@ tr:hover{background:#f3f2f1}
     <div class="kpi"><div class="val">$(if($wf){"$($wf.RawCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Raw Capacity (binary)</div></div>
     <div class="kpi"><div class="val">$(if($wf){"$($wf.AvailableForVolumes.TiB) TiB"}else{'N/A'})</div><div class="lbl">Avail for Volumes — footprint</div></div>
     <div class="kpi"><div class="val">$(if($wf){"$($wf.UsableCapacity.TiB) TiB"}else{'N/A'})</div><div class="lbl">Usable Data — after resiliency</div></div>
-    <div class="kpi$(if($wf -and $wf.IsAbove70PctLine -and $hasThinVolumes){' warn'}else{''})"><div class="val">$(if($wf -and $wf.PlanningLine70Pct){"$($wf.PlanningLine70Pct.TiB) TiB"}else{'N/A'})</div><div class="lbl">$(if($hasThinVolumes){'70% Planning Line — footprint'}else{'70% Advisory Line — footprint'})</div></div>
+    $kpi70Html
     <div class="kpi"><div class="val">$(if($pool){"$($pool.RemainingSize.TiB) TiB"}else{'N/A'})</div><div class="lbl">Pool Free (binary)</div></div>
     <div class="kpi"><div class="val">$($disks.Count)</div><div class="lbl">Physical Disks</div></div>
     <div class="kpi"><div class="val">$(@($vols | Where-Object { -not $_.IsInfrastructureVolume }).Count)</div><div class="lbl">Workload Volumes</div></div>
@@ -395,8 +399,6 @@ tr:hover{background:#f3f2f1}
   <p style="margin-bottom:16px;font-size:11px;color:var(--muted);font-style:italic">Size to enter is the value to type into New-Volume -Size or WAC. PowerShell and WAC read size suffixes as binary (1 TB = 1 TiB), so this equals the TiB column, rounded down so the new volume always fits.</p>
   <div style="position:relative;height:220px"><canvas id="ehChart"></canvas></div>
 </div>
-
-$mraSectionHtml
 
 <div class="section">
   <h2>Health Checks</h2>

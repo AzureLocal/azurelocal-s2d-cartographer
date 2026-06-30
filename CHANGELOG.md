@@ -8,6 +8,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.9.1] — 2026-06-30
+
+### Changed
+
+- **Pool "Overcommit" label no longer cries wolf on healthy pools.** The HTML and Word report pool
+  summaries printed `Overcommit: 0.24x` for every pool, but "overcommit" only means something when
+  provisioned capacity exceeds the pool total (ratio > 1.0x — the thin-provisioning case where writes
+  can fail). A lightly-provisioned, healthy pool now reads `Provisioned: 24.2% of pool (within
+  capacity)`; the red `Overcommit: N.NNx` label appears only when the ratio is genuinely > 1.0x.
+
+### Removed
+
+- **70% line KPI tile removed from the Executive Summary for fixed-provisioned clusters.** The 70% line
+  is a thin-provisioning headroom guideline, not a current-health metric and not a Microsoft hard limit.
+  It now appears in the HTML Executive Summary health band **only when thin-provisioned volumes are
+  present** (where a full pool takes thin volumes offline). For fixed/thick clusters the figure still
+  lives in the Capacity Model waterfall and the expansion-headroom table below — it just no longer
+  competes with health signals at the top of the report.
+- **"Compute Maintenance Reserve Context (N+1/N+2)" advisory box removed from the HTML and Word reports.**
+  N+1/N+2 is a COMPUTE resiliency concept (reserve a node's worth of CPU + RAM so a node can be drained
+  for maintenance), not a storage figure — so it added no value to a storage-capacity audit, and half
+  the box was spent explaining why it was *not* a storage reserve. The `MaintenanceReserveN1` health
+  check (Info severity) still carries the advisory in Health Checks, and the
+  `MaintenanceReserveAssessment` object remains on the cluster data for Surveyor's planning deductions.
+
 ## [1.9.0] — 2026-06-30
 
 ### Added

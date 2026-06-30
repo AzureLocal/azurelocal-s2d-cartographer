@@ -321,7 +321,15 @@ $($drows -join '')
     if ($pool) {
         $summaryRows.Add([PSCustomObject]@{ Metric = 'Pool Total';    Value = "$($pool.TotalSize.TiB) TiB ($($pool.TotalSize.TB) TB)" })
         $summaryRows.Add([PSCustomObject]@{ Metric = 'Pool Free';     Value = "$($pool.RemainingSize.TiB) TiB ($($pool.RemainingSize.TB) TB)" })
-        $summaryRows.Add([PSCustomObject]@{ Metric = 'Overcommit Ratio'; Value = "$($pool.OvercommitRatio)x" })
+        # "Overcommit" only applies when provisioned capacity exceeds the pool total (ratio > 1.0x).
+        # Below 1.0x the pool is under-committed; printing "Overcommit Ratio: 0.24x" reads as a false
+        # alarm. Mirror the HTML report: show a neutral provisioning percentage when within capacity,
+        # and surface the overcommit ratio only when it is genuine (> 1.0x).
+        if ($pool.OvercommitRatio -gt 1.0) {
+            $summaryRows.Add([PSCustomObject]@{ Metric = 'Overcommit Ratio'; Value = "$($pool.OvercommitRatio)x" })
+        } else {
+            $summaryRows.Add([PSCustomObject]@{ Metric = 'Provisioned'; Value = "$([math]::Round($pool.OvercommitRatio * 100, 1))% of pool (within capacity)" })
+        }
     }
     if ($Author)  { $summaryRows.Add([PSCustomObject]@{ Metric = 'Prepared By';   Value = $Author }) }
     if ($Company) { $summaryRows.Add([PSCustomObject]@{ Metric = 'Organization';  Value = $Company }) }
@@ -454,29 +462,11 @@ $($drows -join '')
     }
     $body += PageBreak
 
-    # Compute Maintenance Reserve Context — INFORMATIONAL ONLY
-    # DEFENSIVE: every property access is guarded — null assessment skips the section.
-    # N+1/N+2 is a COMPUTE resiliency target, not a storage-pool reserve.
-    $mraData = $ClusterData.MaintenanceReserveAssessment
-    if ($null -ne $mraData -and $mraData.Status -ne 'Unknown') {
-        $mraTargetLabel = if ($mraData.Target) { [string]$mraData.Target } else { 'N+1' }
-        $body += SectionHeader "Compute Maintenance Reserve Context ($mraTargetLabel) — Advisory"
-        $body += Spacer
-        $mraNodeVal = if ($mraData.LargestNodeCapacity) {
-            "$([math]::Round($mraData.LargestNodeCapacity.TB, 2)) TB / $([math]::Round($mraData.LargestNodeCapacity.TiB, 2)) TiB"
-        } else { 'N/A' }
-        $body += KpiTable @(
-            @{ label = 'Largest node raw storage'; value = $mraNodeVal;     status = 'neutral' }
-            @{ label = "$mraTargetLabel context";  value = 'Advisory only'; status = 'neutral' }
-        )
-        $body += Spacer
-        $body += Para 'N+1/N+2 is a COMPUTE resiliency target — reserve one or two nodes'' worth of CPU + RAM so a node can be drained for updates or lost without dropping VMs. Microsoft WAF scopes this to compute and lists it separately from storage. It is not a storage-pool reserve. The firm storage reserves are the per-drive rebuild reserve and keeping volume footprints within the pool.' `
-            -sz 20 -color '605E5C' -spaceBefore 40 -spaceAfter 80
-        if ($mraData.Note) {
-            $body += Para ([string]$mraData.Note) -sz 20 -color '605E5C' -spaceBefore 20 -spaceAfter 60
-        }
-        $body += PageBreak
-    }
+    # Compute Maintenance Reserve (N+1/N+2) context section removed (v1.9.1): it is a COMPUTE
+    # resiliency concept (reserve a node's worth of CPU+RAM for maintenance), not a storage figure,
+    # so it added no value to a storage-capacity report and confused readers — mirrors the HTML
+    # report change. The MaintenanceReserveN1 health check (Info) still carries the advisory, and
+    # $ClusterData.MaintenanceReserveAssessment remains available for Surveyor's planning deductions.
 
     # Health Assessment
     $body += SectionHeader 'Health Assessment'
