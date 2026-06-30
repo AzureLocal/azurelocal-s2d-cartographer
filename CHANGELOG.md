@@ -8,6 +8,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-06-29
+
+> **Wave 1 — Capacity accuracy.** The capacity waterfall is reconciled to the canonical model
+> (`docs/capacity-model.md`) shared with Azure Local Surveyor.
+
+### Changed
+
+- Resiliency factor is now always derived from each volume's actual `NumberOfDataCopies` when present.
+  When that value is unavailable, the unsafe default fallback changed from `3.0` to `2.0` (two-way
+  mirror) and the waterfall stage is labeled `[ASSUMED — actual NumberOfDataCopies not available]`
+  via the new `-ResiliencyIsAssumed` switch. A real pool value is always preferred over the
+  assumption. (AB#4642)
+
+### Confirmed
+
+- Reserve calculation confirmed canonical — one capacity drive per server, up to 4 drives (raw-byte
+  basis). No change required. (AB#4643)
+
 ## [1.4.2] — 2026-04-14
 
 ### Fixed
