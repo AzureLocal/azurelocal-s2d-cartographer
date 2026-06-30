@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "title": "Golden-cluster cross-tool reconciliation fixture",
+    "purpose": "Single shared contract that BOTH Surveyor (TypeScript) and S2D Cartographer (PowerShell) validate against. If both repos' reconciliation tests pass against this identical file, the two tools agree on the canonical capacity model (docs/capacity-model.md) by construction.",
+    "syncRule": "IDENTICAL COPY in both repos. Edit one => copy to the other. Surveyor: src/engine/__tests__/fixtures/golden-clusters.json. Cartographer: tests/maproom/Fixtures/golden-clusters.json.",
+    "model": "docs/capacity-model.md (Wave 0 ratified). All expected values are in BYTES (the universal unit). Tolerance is ±2% per the Wave 1 reconciliation gate.",
+    "ado": "AB#4633 (child: golden-cluster cross-tool reconciliation test)",
+    "units": {
+      "TB": 1000000000000,
+      "TiB": 1099511627776
+    },
+    "fields": {
+      "hardware.infraVolumeSizeTB": "LOGICAL infra volume size (decimal TB). Each engine derives the pool FOOTPRINT from this via the resiliency factor: footprint = logical x resiliencyDivisor.",
+      "hardware.resiliencyDivisor": "Pool footprint / usable-data ratio = number of copies for mirror, or 1/efficiency for parity. Surveyor derives this from the resiliency name + node count; Cartographer takes it directly as -ResiliencyFactor.",
+      "expected.*Bytes": "Canonical pipeline output in bytes. Both engines must land within tolerancePct of these."
+    }
+  },
+  "tolerancePct": 2.0,
+  "clusters": [
+    {
+      "id": "ref-2node-4x3.84-twoway",
+      "description": "Reference cluster from docs/capacity-model.md: 2 nodes, 4x3.84TB NVMe, two-way mirror. The original 22.44-vs-20.45 divergence case.",
+      "hardware": {
+        "nodeCount": 2,
+        "capacityDrivesPerNode": 4,
+        "capacityDriveSizeTB": 3.84,
+        "resiliency": "two-way-mirror",
+        "resiliencyDivisor": 2.0,
+        "infraVolumeSizeTB": 0.25
+      },
+      "expected": {
+        "rawBytes": 30720000000000,
+        "poolAfterMetaBytes": 30412800000000,
+        "reserveBytes": 7680000000000,
+        "infraFootprintBytes": 500000000000,
+        "availableForVolumesBytes": 22232800000000,
+        "usableBytes": 11116400000000
+      }
+    },
+    {
+      "id": "4node-6x3.84-threeway",
+      "description": "4 nodes, 6x3.84TB NVMe, three-way mirror. Reserve capped at min(nodes,4)=4 drives.",
+      "hardware": {
+        "nodeCount": 4,
+        "capacityDrivesPerNode": 6,
+        "capacityDriveSizeTB": 3.84,
+        "resiliency": "three-way-mirror",
+        "resiliencyDivisor": 3.0,
+        "infraVolumeSizeTB": 0.25
+      },
+      "expected": {
+        "rawBytes": 92160000000000,
+        "poolAfterMetaBytes": 91238400000000,
+        "reserveBytes": 15360000000000,
+        "infraFootprintBytes": 750000000000,
+        "availableForVolumesBytes": 75128400000000,
+        "usableBytes": 25042800000000
+      }
+    },
+    {
+      "id": "8node-6x3.84-dualparity",
+      "description": "8 nodes, 6x3.84TB NVMe, dual parity (7-8 nodes -> 66.7% efficiency, divisor 1.5). Reserve capped at 4 drives.",
+      "hardware": {
+        "nodeCount": 8,
+        "capacityDrivesPerNode": 6,
+        "capacityDriveSizeTB": 3.84,
+        "resiliency": "dual-parity",
+        "resiliencyDivisor": 1.5,
+        "infraVolumeSizeTB": 0.25
+      },
+      "expected": {
+        "rawBytes": 184320000000000,
+        "poolAfterMetaBytes": 182476800000000,
+        "reserveBytes": 15360000000000,
+        "infraFootprintBytes": 375000000000,
+        "availableForVolumesBytes": 166741800000000,
+        "usableBytes": 111161200000000
+      }
+    },
+    {
+      "id": "4node-8x14-hdd-threeway",
+      "description": "4 nodes, 8x14TB HDD capacity tier, three-way mirror. Large-drive case; usable terminus exercises ±2% rounding tolerance between the two engines.",
+      "hardware": {
+        "nodeCount": 4,
+        "capacityDrivesPerNode": 8,
+        "capacityDriveSizeTB": 14,
+        "resiliency": "three-way-mirror",
+        "resiliencyDivisor": 3.0,
+        "infraVolumeSizeTB": 0.25
+      },
+      "expected": {
+        "rawBytes": 448000000000000,
+        "poolAfterMetaBytes": 443520000000000,
+        "reserveBytes": 56000000000000,
+        "infraFootprintBytes": 750000000000,
+        "availableForVolumesBytes": 386770000000000,
+        "usableBytes": 128923333333333
+      }
+    }
+  ]
+}
