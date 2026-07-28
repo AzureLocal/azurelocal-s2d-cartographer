@@ -118,16 +118,17 @@ $current = (Get-Item WSMan:\localhost\Client\TrustedHosts).Value
 Set-Item WSMan:\localhost\Client\TrustedHosts -Value "$current,tplabs-clus01.azrl.mgmt" -Force
 ```
 
-!!! tip "Use FQDNs in TrustedHosts"
-    S2DCartographer resolves short cluster names to FQDNs via DNS before connecting. If you configure TrustedHosts with short names (`tplabs-clus01`) but the module resolves to an FQDN (`tplabs-clus01.azrl.mgmt`), the WinRM handshake will fail with `0x8009030e`. Always use FQDNs in TrustedHosts.
-
-    **Resolution order** used by `Connect-S2DCluster`:
-
-    1. TrustedHosts — checks if the short name matches a FQDN entry and promotes it
-    2. DNS (`GetHostEntry`) — resolves short name to FQDN
-    3. Short-name pass-through — last resort
-    4. Precise error with remediation steps if all fail
-
+> [!TIP]
+> **Use FQDNs in TrustedHosts**
+> S2DCartographer resolves short cluster names to FQDNs via DNS before connecting. If you configure TrustedHosts with short names (`tplabs-clus01`) but the module resolves to an FQDN (`tplabs-clus01.azrl.mgmt`), the WinRM handshake will fail with `0x8009030e`. Always use FQDNs in TrustedHosts.
+>
+> **Resolution order** used by `Connect-S2DCluster`:
+>
+> 1. TrustedHosts — checks if the short name matches a FQDN entry and promotes it
+> 2. DNS (`GetHostEntry`) — resolves short name to FQDN
+> 3. Short-name pass-through — last resort
+> 4. Precise error with remediation steps if all fail
+>
 ### Firewall
 
 | Port | Protocol | Direction | Purpose |
@@ -168,9 +169,10 @@ All per-node CIM sessions inherit the `Authentication` method and `Credential` f
 
 WinRM negotiates authentication based on the target hostname. A short name that resolves via DNS to an FQDN will negotiate Kerberos; but if TrustedHosts is configured with FQDNs (the typical pattern on workgroup hosts), WinRM compares the **requested** hostname (short) against the trusted list (FQDN) and rejects the handshake. S2DCartographer resolves short names to FQDNs before issuing the CIM call specifically to avoid this mismatch.
 
-!!! note "The module never silently modifies TrustedHosts"
-    `Connect-S2DCluster` will **not** write to `WSMan:\localhost\Client\TrustedHosts` on your behalf. TrustedHosts is a security-sensitive setting and modifying it requires deliberate operator action. The module detects the misconfiguration and throws a precise error with remediation steps.
-
+> [!NOTE]
+> **The module never silently modifies TrustedHosts**
+> `Connect-S2DCluster` will **not** write to `WSMan:\localhost\Client\TrustedHosts` on your behalf. TrustedHosts is a security-sensitive setting and modifying it requires deliberate operator action. The module detects the misconfiguration and throws a precise error with remediation steps.
+>
 ---
 
 ## Operator Decision Tree

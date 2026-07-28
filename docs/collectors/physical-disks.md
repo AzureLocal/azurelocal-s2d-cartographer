@@ -148,17 +148,19 @@ Get-S2DPhysicalDiskInventory | Where-Object Role -eq 'Capacity' | Format-Table F
 
 ## Troubleshooting
 
-!!! warning "Returns empty or partial results"
-    If the command returns nothing or only disks from some nodes, at least one node is unreachable. Use `-Verbose` to see per-node connection attempts:
-
-    ```powershell
-    Get-S2DPhysicalDiskInventory -Verbose
-    ```
-
-    Look for `WARNING: Could not collect disks from node` lines.
-
+> [!WARNING]
+> **Returns empty or partial results**
+> If the command returns nothing or only disks from some nodes, at least one node is unreachable. Use `-Verbose` to see per-node connection attempts:
+>
+> ```powershell
+> Get-S2DPhysicalDiskInventory -Verbose
+> ```
+>
+> Look for `WARNING: Could not collect disks from node` lines.
+>
 !!! note "Reliability counters may be null"
     `WearPercentage`, `PowerOnHours`, `ReadErrors`, and `WriteErrors` are sourced from `Get-StorageReliabilityCounter`. Some drivers and firmware versions do not expose all reliability counters — these properties will be `$null` when the counter is unavailable.
 
-!!! tip "Running on a cluster node"
-    If you run `Connect-S2DCluster -Local` directly on a node, the function skips per-node session creation and queries the local host only. All pool disks visible to that node will be returned, but disks exclusively visible to other nodes may be missing.
+> [!TIP]
+> **Running on a cluster node**
+> If you run `Connect-S2DCluster -Local` directly on a node, the function skips per-node session creation and queries the local host only. All pool disks visible to that node will be returned, but disks exclusively visible to other nodes may be missing.

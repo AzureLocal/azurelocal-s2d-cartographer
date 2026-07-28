@@ -75,9 +75,10 @@ Azure Local automatically creates one or more infrastructure volumes for cluster
 
 - Volumes smaller than 600 GiB are flagged as infrastructure volumes
 
-!!! note "Infrastructure volume in capacity math"
-    The infrastructure volume footprint is broken out in Stage 5 of the capacity waterfall so that it does not inflate the workload usable capacity figure. Use `Where-Object IsInfrastructureVolume -eq $false` to see workload volumes only.
-
+> [!NOTE]
+> **Infrastructure volume in capacity math**
+> The infrastructure volume footprint is broken out in Stage 5 of the capacity waterfall so that it does not inflate the workload usable capacity figure. Use `Where-Object IsInfrastructureVolume -eq $false` to see workload volumes only.
+>
 ---
 
 ## CIM Sources
@@ -126,13 +127,14 @@ Get-S2DVolumeMap -VolumeName "VM-Storage-01" | Format-List
 
 ## Troubleshooting
 
-!!! warning "No volumes returned"
-    If the command emits `No virtual disks found`, either no volumes have been created yet or the PSSession cannot see them. Verify on a cluster node:
-
-    ```powershell
-    Get-VirtualDisk | Format-Table FriendlyName, OperationalStatus, HealthStatus
-    ```
-
+> [!WARNING]
+> **No volumes returned**
+> If the command emits `No virtual disks found`, either no volumes have been created yet or the PSSession cannot see them. Verify on a cluster node:
+>
+> ```powershell
+> Get-VirtualDisk | Format-Table FriendlyName, OperationalStatus, HealthStatus
+> ```
+>
 !!! tip "Usable Capacity (Stage 7) is zero after Get-S2DCapacityWaterfall"
     If the final usable capacity is 0 TiB, no workload volumes were found — either all volumes are classified as infrastructure, or `Get-S2DVolumeMap` returned no results. Check:
 

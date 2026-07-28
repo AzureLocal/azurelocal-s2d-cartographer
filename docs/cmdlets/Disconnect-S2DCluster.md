@@ -48,5 +48,5 @@ finally {
 }
 ```
 
-!!! note
-    `Invoke-S2DCartographer` calls `Disconnect-S2DCluster` automatically at the end of its pipeline. You only need to call this directly when using the individual collector cmdlets manually.
+> [!NOTE]
+> `Invoke-S2DCartographer` calls `Disconnect-S2DCluster` automatically at the end of its pipeline. You only need to call this directly when using the individual collector cmdlets manually.

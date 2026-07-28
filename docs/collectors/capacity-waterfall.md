@@ -104,9 +104,10 @@ Stage 4 computes a reserve status based on how actual free pool space compares t
 
 The reserve recommendation follows the Microsoft S2D guidance: keep `min(NodeCount, 4)` capacity drive equivalents unallocated so the pool can rebuild after a drive or node failure.
 
-!!! danger "Critical reserve status"
-    A Critical reserve means the pool cannot guarantee a complete rebuild after the loss of the largest drive. Immediately free pool space by shrinking or removing volumes.
-
+> [!CAUTION]
+> **Critical reserve status**
+> A Critical reserve means the pool cannot guarantee a complete rebuild after the loss of the largest drive. Immediately free pool space by shrinking or removing volumes.
+>
 ---
 
 ## Session Behavior
@@ -141,15 +142,17 @@ $wf.Stages | Where-Object Stage -eq 4 | Format-List
 
 ## Troubleshooting
 
-!!! warning "Stage 7 (Usable Capacity) is 0 TiB"
-    Usable capacity is zero when no workload volumes exist, or all volumes are classified as infrastructure. Check:
-
-    ```powershell
-    Get-S2DVolumeMap | Format-Table FriendlyName, IsInfrastructureVolume, Size
-    ```
-
+> [!WARNING]
+> **Stage 7 (Usable Capacity) is 0 TiB**
+> Usable capacity is zero when no workload volumes exist, or all volumes are classified as infrastructure. Check:
+>
+> ```powershell
+> Get-S2DVolumeMap | Format-Table FriendlyName, IsInfrastructureVolume, Size
+> ```
+>
 !!! note "Stage 2 shows no change"
     Stage 2 is informational only — it shows the vendor-labeled TB value alongside the Windows TiB value. The `Size` property does not change from Stage 1 to Stage 2 because the underlying bytes are the same. See [TiB vs TB](../tib-vs-tb.md) for an explanation of the discrepancy.
 
-!!! tip "NodeCount affects reserve calculation"
-    The reserve uses `min(NodeCount, 4)` where `NodeCount` comes from `$Script:S2DSession.Nodes.Count`. If you call `Get-S2DCapacityWaterfall` without an active `Connect-S2DCluster` session (e.g., passing `-CimSession` directly to collectors), the node count falls back to the disk symmetry group count or `4`. Use `Connect-S2DCluster` for accurate node counts.
+> [!TIP]
+> **NodeCount affects reserve calculation**
+> The reserve uses `min(NodeCount, 4)` where `NodeCount` comes from `$Script:S2DSession.Nodes.Count`. If you call `Get-S2DCapacityWaterfall` without an active `Connect-S2DCluster` session (e.g., passing `-CimSession` directly to collectors), the node count falls back to the disk symmetry group count or `4`. Use `Connect-S2DCluster` for accurate node counts.

@@ -63,9 +63,10 @@ New-S2DReport -InputObject $data -Format Word `
     -OutputDirectory "C:\Deliverables\"
 ```
 
-!!! note "No Office required"
-    The Word document is built from scratch using Open XML — compatible with Word 2016+, LibreOffice, and Google Docs. Microsoft Office does not need to be installed on the machine running S2DCartographer.
-
+> [!NOTE]
+> **No Office required**
+> The Word document is built from scratch using Open XML — compatible with Word 2016+, LibreOffice, and Google Docs. Microsoft Office does not need to be installed on the machine running S2DCartographer.
+>
 !!! warning "Garbled XML on open"
     If the generated `.docx` opens with a repair prompt or shows garbled XML, this is usually caused by special characters (em-dashes, Unicode symbols) in cluster or volume names. Please [open an issue](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/new?template=bug_report.yml) with the cluster name and affected volume names.
 
@@ -87,9 +88,10 @@ Generates HTML first, then uses headless Edge or Chrome to print it to PDF.
 New-S2DReport -InputObject $data -Format Pdf -OutputDirectory "C:\Reports\"
 ```
 
-!!! note "Browser requirement"
-    PDF generation requires Microsoft Edge or Google Chrome. Edge ships pre-installed on Windows 11, Windows Server 2022+, and Azure Local nodes. If no browser is found, the command warns and returns `$null`.
-
+> [!NOTE]
+> **Browser requirement**
+> PDF generation requires Microsoft Edge or Google Chrome. Edge ships pre-installed on Windows 11, Windows Server 2022+, and Azure Local nodes. If no browser is found, the command warns and returns `$null`.
+>
 !!! tip "Manual PDF from HTML"
     If no browser is available, generate the HTML report first, then open it in a browser to print manually (Edge/Chrome → Print → Save as PDF).
 
@@ -122,9 +124,10 @@ Multi-tab `.xlsx` using the [ImportExcel](https://github.com/dfinke/ImportExcel)
 New-S2DReport -InputObject $data -Format Excel -OutputDirectory "C:\Reports\"
 ```
 
-!!! note "ImportExcel installed automatically"
-    `ImportExcel` is declared as a required module in the S2DCartographer manifest. When you install S2DCartographer from PSGallery, `ImportExcel` is installed automatically — no manual step required.
-
+> [!NOTE]
+> **ImportExcel installed automatically**
+> `ImportExcel` is declared as a required module in the S2DCartographer manifest. When you install S2DCartographer from PSGallery, `ImportExcel` is installed automatically — no manual step required.
+>
 ---
 
 ## JSON Snapshot
@@ -169,9 +172,10 @@ jq '.CapacityWaterfall.UsableCapacity.TiB' snapshot.json
 jq '.HealthChecks[] | select(.Status != "Pass")' snapshot.json
 ```
 
-!!! note "JSON always contains every disk"
-    The JSON export includes every disk visible to every node — boot drives and SAN-presented LUNs too — each tagged with an `IsPoolMember` boolean. This is by design: downstream tools get full fidelity. The Physical Disk Inventory in HTML / Word / PDF / Excel reports filters to pool members only by default.
-
+> [!NOTE]
+> **JSON always contains every disk**
+> The JSON export includes every disk visible to every node — boot drives and SAN-presented LUNs too — each tagged with an `IsPoolMember` boolean. This is by design: downstream tools get full fidelity. The Physical Disk Inventory in HTML / Word / PDF / Excel reports filters to pool members only by default.
+>
 ---
 
 ## CSV Tables

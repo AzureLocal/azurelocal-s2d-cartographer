@@ -22,9 +22,10 @@ Enable-PSRemoting -Force
 Test-NetConnection -ComputerName "node01.contoso.com" -Port 5985
 ```
 
-!!! note "Azure Local default state"
-    WinRM is enabled by default on Azure Local nodes deployed through Azure Arc. If nodes were deployed via an older wizard-based method, WinRM may need to be enabled manually.
-
+> [!NOTE]
+> **Azure Local default state**
+> WinRM is enabled by default on Azure Local nodes deployed through Azure Arc. If nodes were deployed via an older wizard-based method, WinRM may need to be enabled manually.
+>
 ---
 
 ### RSAT cmdlets not found
@@ -41,9 +42,10 @@ Add-WindowsCapability -Online -Name "Rsat.FailoverCluster.Management.Tools~~~~0.
 Add-WindowsCapability -Online -Name "Rsat.FileServices.Tools~~~~0.0.1.0"
 ```
 
-!!! tip "Running on a cluster node"
-    If you run S2DCartographer directly on a cluster node with `Connect-S2DCluster -Local`, no RSAT installation is needed — the cmdlets are already present on the node.
-
+> [!TIP]
+> **Running on a cluster node**
+> If you run S2DCartographer directly on a cluster node with `Connect-S2DCluster -Local`, no RSAT installation is needed — the cmdlets are already present on the node.
+>
 ---
 
 ### Non-domain-joined: authentication fails with Kerberos error
@@ -95,9 +97,10 @@ If no pool is returned, S2D is either not enabled or the pool is offline.
 Install-Module ImportExcel -Scope CurrentUser -Force
 ```
 
-!!! warning "Required for Excel only"
-    `ImportExcel` is only needed for `-Format Excel` or `-Format All`. HTML, Word, and PDF reports have no additional dependencies.
-
+> [!WARNING]
+> **Required for Excel only**
+> `ImportExcel` is only needed for `-Format Excel` or `-Format All`. HTML, Word, and PDF reports have no additional dependencies.
+>
 ---
 
 ### PDF: `No suitable browser found`
@@ -118,13 +121,14 @@ The browser search order is:
 2. `chrome.exe` in standard Chrome install paths
 3. `msedge` / `chrome` / `chromium-browser` on `$env:PATH`
 
-!!! tip "Manual PDF from HTML"
-    If no browser is available, generate the HTML report first and open it in a browser to print manually:
-    ```powershell
-    New-S2DReport -InputObject $data -Format Html -OutputDirectory "C:\Reports\"
-    # Open the .html file in Edge/Chrome → Print → Save as PDF
-    ```
-
+> [!TIP]
+> **Manual PDF from HTML**
+> If no browser is available, generate the HTML report first and open it in a browser to print manually:
+> ```powershell
+> New-S2DReport -InputObject $data -Format Html -OutputDirectory "C:\Reports\"
+> # Open the .html file in Edge/Chrome → Print → Save as PDF
+> ```
+>
 ---
 
 ### Word: `Unexpected token in Open XML`

@@ -69,9 +69,10 @@ The `OvercommitRatio` reflects thin provisioning exposure:
 
 The `ThinOvercommit` health check in `Get-S2DHealthStatus` flags any cluster where `OvercommitRatio > 1.0`.
 
-!!! warning "Overcommit and pool exhaustion"
-    If thin volumes grow to consume their full logical size, the pool can run out of space unexpectedly. This causes volume pauses and can corrupt workloads. Monitor `RemainingSize` against expected growth rates.
-
+> [!WARNING]
+> **Overcommit and pool exhaustion**
+> If thin volumes grow to consume their full logical size, the pool can run out of space unexpectedly. This causes volume pauses and can corrupt workloads. Monitor `RemainingSize` against expected growth rates.
+>
 ---
 
 ## CIM Sources
@@ -120,16 +121,17 @@ $pool = Get-S2DStoragePoolInfo
 
 ## Troubleshooting
 
-!!! danger "Returns `$null` — pool not found"
-    If the command returns nothing and warns `No non-primordial storage pool found`, S2D may not be enabled or the pool may be offline.
-
-    Verify on a cluster node:
-
-    ```powershell
-    Get-StoragePool | Where-Object IsPrimordial -eq $false
-    ```
-
-    If no pool is returned, check `Get-ClusterS2D` to confirm S2D is enabled.
-
+> [!CAUTION]
+> **Returns `$null` — pool not found**
+> If the command returns nothing and warns `No non-primordial storage pool found`, S2D may not be enabled or the pool may be offline.
+>
+> Verify on a cluster node:
+>
+> ```powershell
+> Get-StoragePool | Where-Object IsPrimordial -eq $false
+> ```
+>
+> If no pool is returned, check `Get-ClusterS2D` to confirm S2D is enabled.
+>
 !!! note "AllocatedSize vs ProvisionedSize"
     `AllocatedSize` is the actual pool footprint consumed by virtual disk data (resiliency overhead included). `ProvisionedSize` is the sum of logical sizes as seen by the guest — for thin volumes these differ. Use `AllocatedSize` for physical capacity planning, `ProvisionedSize` for overcommit monitoring.

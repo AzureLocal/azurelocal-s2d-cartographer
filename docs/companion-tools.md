@@ -15,5 +15,6 @@ S2DCartographer is part of a broader set of Azure Local tooling. These tools are
 | **Output** | Capacity model, sizing recommendations | Audit report, health checks, what-if scenarios |
 | **Live cluster required** | No | No (snapshot mode) |
 
-!!! tip "The workflow"
-    **Surveyor plans; Cartographer verifies.** Run Surveyor during the design phase to confirm your hardware choices meet your capacity requirements. Run S2DCartographer after deployment to validate the build matches what was planned — and on an ongoing basis to track health and available headroom.
+> [!TIP]
+> **The workflow**
+> **Surveyor plans; Cartographer verifies.** Run Surveyor during the design phase to confirm your hardware choices meet your capacity requirements. Run S2DCartographer after deployment to validate the build matches what was planned — and on an ongoing basis to track health and available headroom.

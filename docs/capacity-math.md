@@ -25,20 +25,22 @@ flowchart LR
 
 Sum of all **capacity-tier** disk sizes across all nodes. Cache-tier disks are excluded — they don't contribute to pool capacity.
 
-!!! example "3-node, all-NVMe cluster"
-    ```text
-    4 nodes × 4× Samsung PM9A3 3.84 TB NVMe = 16 drives × 3.49 TiB = 55.88 TiB
-    ```
-
+> [!NOTE]
+> **3-node, all-NVMe cluster**
+> ```text
+> 4 nodes × 4× Samsung PM9A3 3.84 TB NVMe = 16 drives × 3.49 TiB = 55.88 TiB
+> ```
+>
 ---
 
 ### Stage 2 — After Vendor Labeling Adjustment
 
 Shows the discrepancy between drive labels (TB) and what Windows reports (TiB). This is the unit-conversion gap described in [TiB vs TB](tib-vs-tb.md). No actual bytes are lost — this stage makes the difference visible.
 
-!!! info "No bytes change at Stage 2"
-    Stage 2 is informational. The `Size` value does not change from Stage 1. The stage description shows the vendor-labeled TB value so you can compare it to your drive specification sheets.
-
+> [!NOTE]
+> **No bytes change at Stage 2**
+> Stage 2 is informational. The `Size` value does not change from Stage 1. The stage description shows the vendor-labeled TB value so you can compare it to your drive specification sheets.
+>
 ---
 
 ### Stage 3 — After Storage Pool Overhead
@@ -55,12 +57,13 @@ Microsoft recommends keeping `min(NodeCount, 4)` capacity drive equivalents **un
 Reserve = min(NodeCount, 4) × LargestCapacityDriveSize
 ```
 
-!!! example "Reserve calculation"
-    ```text
-    4-node cluster, 3.84 TB drives (3.49 TiB each):
-    Reserve = min(4, 4) × 3.49 TiB = 13.97 TiB
-    ```
-
+> [!NOTE]
+> **Reserve calculation**
+> ```text
+> 4-node cluster, 3.84 TB drives (3.49 TiB each):
+> Reserve = min(4, 4) × 3.49 TiB = 13.97 TiB
+> ```
+>
 S2DCartographer reports the recommended reserve, the actual unallocated space, and one of three statuses:
 
 | Status | Condition |
@@ -69,9 +72,10 @@ S2DCartographer reports the recommended reserve, the actual unallocated space, a
 | `Warning` | Free space is 50–100% of recommended |
 | `Critical` | Free space < 50% of recommended |
 
-!!! danger "Critical reserve"
-    A Critical reserve means the cluster cannot sustain a drive failure and complete a full rebuild. Free pool space immediately.
-
+> [!CAUTION]
+> **Critical reserve**
+> A Critical reserve means the cluster cannot sustain a drive failure and complete a full rebuild. Free pool space immediately.
+>
 ---
 
 ### Stage 5 — After Infrastructure Volume
@@ -80,9 +84,10 @@ Azure Local automatically creates an infrastructure volume for cluster metadata,
 
 S2DCartographer detects the infrastructure volume by name pattern and size heuristic, and breaks it out separately so it does not inflate the workload capacity figure.
 
-!!! note "Detection patterns"
-    Volumes are classified as infrastructure if they match `Infrastructure_<guid>`, `ClusterPerformanceHistory`, `UserStorage_N`, `HCI_UserStorage_N`, `SBEAgent`, or contain `infra` in the name.
-
+> [!NOTE]
+> **Detection patterns**
+> Volumes are classified as infrastructure if they match `Infrastructure_<guid>`, `ClusterPerformanceHistory`, `UserStorage_N`, `HCI_UserStorage_N`, `SBEAgent`, or contain `infra` in the name.
+>
 ---
 
 ### Stage 6 — Available for Workload Volumes
@@ -105,9 +110,10 @@ Stage 6 (Available for Volumes) divided by the resiliency factor. This is the am
 
 `BlendedEfficiencyPercent` on the waterfall object reports the theoretical efficiency for the cluster's configured resiliency type.
 
-!!! info "This is theoretical"
-    The waterfall shows what you *can* store given perfect resiliency alignment. It is not a live count of what is provisioned. Actual provisioning state is in the Volume Map and Health Checks sections of the report.
-
+> [!NOTE]
+> **This is theoretical**
+> The waterfall shows what you *can* store given perfect resiliency alignment. It is not a live count of what is provisioned. Actual provisioning state is in the Volume Map and Health Checks sections of the report.
+>
 ---
 
 ## Example Waterfall

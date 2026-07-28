@@ -144,9 +144,10 @@ Invoke-S2DCapacityWhatIf `
 
 Stage 7 (Usable Capacity) changes. All earlier stages are unchanged because resiliency does not affect pool or reserve math. Blended efficiency changes from 33.3% to 50.0%.
 
-!!! warning "Resiliency change is a cluster-level operation"
-    Changing resiliency on a live cluster requires draining, stopping, and reconfiguring volumes. This cmdlet models the capacity outcome only — it does not make any live changes.
-
+> [!WARNING]
+> **Resiliency change is a cluster-level operation**
+> Changing resiliency on a live cluster requires draining, stopping, and reconfiguring volumes. This cmdlet models the capacity outcome only — it does not make any live changes.
+>
 ---
 
 ### Composite: add 2 nodes + more disks + new resiliency

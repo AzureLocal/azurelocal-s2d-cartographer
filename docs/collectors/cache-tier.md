@@ -57,9 +57,10 @@ When all drives are NVMe or SSD, S2D does not use a physical cache/capacity spli
 - `SoftwareCacheEnabled = $true` — set from `ClusterS2D.CacheEnabled` or forced when all-flash is detected
 - `CacheDiskCount = 0` — no dedicated cache devices
 
-!!! info "All-NVMe is the Azure Local default"
-    Most Azure Local HCI configurations validated by Microsoft use all-NVMe drives. On these clusters, the software write-back cache is the only cache mechanism — `Get-S2DCacheTierInfo` will report `IsAllFlash = $true` and `SoftwareCacheEnabled = $true` with no physical cache disks.
-
+> [!NOTE]
+> **All-NVMe is the Azure Local default**
+> Most Azure Local HCI configurations validated by Microsoft use all-NVMe drives. On these clusters, the software write-back cache is the only cache mechanism — `Get-S2DCacheTierInfo` will report `IsAllFlash = $true` and `SoftwareCacheEnabled = $true` with no physical cache disks.
+>
 ---
 
 ## CacheState Values
@@ -113,10 +114,11 @@ Get-S2DPhysicalDiskInventory | Where-Object Role -eq 'Cache' | Format-Table Node
 
 ## Troubleshooting
 
-!!! warning "CacheDiskCount is 0 on a hybrid cluster"
-    If you expect physical cache disks but see `CacheDiskCount = 0`, the cache disks may not be classified correctly. Check that `Get-S2DPhysicalDiskInventory` shows some disks with `Role = Cache` or `Usage = Journal`.
-
-    On all-NVMe clusters this is expected — `CacheDiskCount = 0` with `SoftwareCacheEnabled = $true` is correct.
-
+> [!WARNING]
+> **CacheDiskCount is 0 on a hybrid cluster**
+> If you expect physical cache disks but see `CacheDiskCount = 0`, the cache disks may not be classified correctly. Check that `Get-S2DPhysicalDiskInventory` shows some disks with `Role = Cache` or `Usage = Journal`.
+>
+> On all-NVMe clusters this is expected — `CacheDiskCount = 0` with `SoftwareCacheEnabled = $true` is correct.
+>
 !!! tip "WriteCacheSizeBytes is 0"
     `WriteCacheSizeBytes` is sourced from `Get-ClusterS2D`. On clusters where `Get-ClusterS2D` is unavailable (e.g., non-domain-joined management machines without RSAT), this property will be 0 even if the cluster has an active write cache. The `IsAllFlash` and `CacheState` properties are still computed from disk data.

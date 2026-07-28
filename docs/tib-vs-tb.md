@@ -12,9 +12,10 @@ Windows (and S2D) report capacity in **tebibytes (TiB)** — the binary system w
 
 The result: a drive labeled "1.92 TB" by the manufacturer shows as **1.75 TiB** in Windows. The drive is not broken. The numbers are just in different units.
 
-!!! info "The gap is always ~6.9%"
-    Because 1 TB = 10^12 bytes and 1 TiB = 2^40 bytes, the ratio is always 0.909. A drive advertised as 3.84 TB will show as 3.49 TiB in Windows — consistently 6.9% smaller than the label.
-
+> [!NOTE]
+> **The gap is always ~6.9%**
+> Because 1 TB = 10^12 bytes and 1 TiB = 2^40 bytes, the ratio is always 0.909. A drive advertised as 3.84 TB will show as 3.49 TiB in Windows — consistently 6.9% smaller than the label.
+>
 ---
 
 ## The Conversion Table
@@ -80,9 +81,10 @@ A 4-node cluster with 4× 3.84 TB NVMe per node:
 - **Marketing math**: 4 nodes × 4 drives × 3.84 TB = **61.44 TB** raw
 - **Windows reality**: 4 × 4 × 3.49 TiB = **55.88 TiB** raw
 
-!!! warning "5.5 TiB lost before resiliency"
-    Before accounting for resiliency overhead or reserve space, unit conversion alone reduces the apparent raw capacity by ~5.5 TiB on a 16-drive cluster. This surprises customers who planned based on vendor marketing numbers.
-
+> [!WARNING]
+> **5.5 TiB lost before resiliency**
+> Before accounting for resiliency overhead or reserve space, unit conversion alone reduces the apparent raw capacity by ~5.5 TiB on a 16-drive cluster. This surprises customers who planned based on vendor marketing numbers.
+>
 S2DCartographer makes this gap visible at Stage 2 of the capacity waterfall — so the TiB/TB discrepancy is explicit, not hidden.
 
 See [Capacity Math](capacity-math.md) for how this feeds into the full 7-stage pipeline.

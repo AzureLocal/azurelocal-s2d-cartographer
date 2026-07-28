@@ -4,9 +4,10 @@
 
 Welcome to **S2DCartographer** — the Storage Spaces Direct analysis, visualization, and reporting tool for Azure Local and Windows Server clusters.
 
-!!! tip "Planning a new cluster?"
-    Use **[Azure Local Surveyor](https://azurelocal.github.io/azurelocal-surveyor)** to model capacity, compute, and workloads *before* you deploy. Run S2DCartographer on the running cluster to validate what was actually built. **Surveyor plans; Cartographer verifies.**
-
+> [!TIP]
+> **Planning a new cluster?**
+> Use **[Azure Local Surveyor](https://azurelocal.github.io/azurelocal-surveyor)** to model capacity, compute, and workloads *before* you deploy. Run S2DCartographer on the running cluster to validate what was actually built. **Surveyor plans; Cartographer verifies.**
+>
 ---
 
 ## What Is This?

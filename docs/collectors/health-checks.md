@@ -72,9 +72,10 @@ Compares actual pool free space against the S2D-recommended rebuild reserve.
 
 **Remediation (Warn/Fail):** Free pool space by deleting or shrinking volumes, or add capacity drives to the pool.
 
-!!! danger "Why this is Critical"
-    If the reserve is insufficient and a drive fails, the storage pool cannot complete a full rebuild. A second failure during an in-progress rebuild risks data loss.
-
+> [!CAUTION]
+> **Why this is Critical**
+> If the reserve is insufficient and a drive fails, the storage pool cannot complete a full rebuild. A second failure during an in-progress rebuild risks data loss.
+>
 ---
 
 ### 2 — DiskSymmetry
@@ -135,9 +136,10 @@ Checks that no NVMe drive exceeds 80% wear percentage.
 
 **Remediation:** Plan replacement for high-wear NVMe drives before they reach 100% (end of rated write endurance). Use `Get-S2DPhysicalDiskInventory` to monitor ongoing wear.
 
-!!! note "Wear data availability"
-    `WearPercentage` comes from `Get-StorageReliabilityCounter`. Some drivers do not expose this counter — if `WearPercentage` is `$null` for all drives, the check passes (no evidence of excess wear). Use `-Verbose` to see which disks have null reliability data.
-
+> [!NOTE]
+> **Wear data availability**
+> `WearPercentage` comes from `Get-StorageReliabilityCounter`. Some drivers do not expose this counter — if `WearPercentage` is `$null` for all drives, the check passes (no evidence of excess wear). Use `-Verbose` to see which disks have null reliability data.
+>
 ---
 
 ### 6 — ThinOvercommit
@@ -159,9 +161,10 @@ Evaluates maximum potential pool footprint for all thin-provisioned volumes agai
 
 **Remediation (Warn/Fail):** Add capacity drives to the pool, reduce provisioned volume sizes, or convert high-risk volumes to fixed provisioning. Use `Get-S2DVolumeMap` to inspect `MaxPotentialFootprint` and `ThinGrowthHeadroom` per volume.
 
-!!! danger "Why this fires before overcommit occurs"
-    The old check fired only when `OvercommitRatio > 1.0` — after the pool was already overcommitted. This check fires at 80% and 100% of *maximum potential* footprint, giving time to act before volumes fill up and pool exhaustion becomes inevitable.
-
+> [!CAUTION]
+> **Why this fires before overcommit occurs**
+> The old check fired only when `OvercommitRatio > 1.0` — after the pool was already overcommitted. This check fires at 80% and 100% of *maximum potential* footprint, giving time to act before volumes fill up and pool exhaustion becomes inevitable.
+>
 ---
 
 ### 7 — FirmwareConsistency
@@ -192,9 +195,10 @@ Checks whether free pool space is sufficient to absorb the loss of the largest s
 
 **Remediation:** Free pool space by removing or shrinking volumes. Consider adding capacity drives.
 
-!!! note "Relationship to ReserveAdequacy"
-    `ReserveAdequacy` checks against the recommended reserve formula `(min(NodeCount,4) × largest drive)`. `RebuildCapacity` checks against the practical rebuild requirement `(largest node's total disk capacity)`. Both can fail independently.
-
+> [!NOTE]
+> **Relationship to ReserveAdequacy**
+> `ReserveAdequacy` checks against the recommended reserve formula `(min(NodeCount,4) × largest drive)`. `RebuildCapacity` checks against the practical rebuild requirement `(largest node's total disk capacity)`. Both can fail independently.
+>
 ---
 
 ### 9 — InfrastructureVolume
@@ -210,9 +214,10 @@ Verifies that the Azure Local infrastructure volume is present and healthy.
 
 **Remediation:** On Azure Local, the infrastructure volume hosts cluster metadata and CSV cache. If missing or degraded, investigate with `Get-VirtualDisk`. A missing infrastructure volume may indicate a deployment issue.
 
-!!! note "Windows Server S2D"
-    On Windows Server S2D (not Azure Local), an infrastructure volume is not always present. A `Warn` status for this check on Windows Server may be expected — use context to determine if action is needed.
-
+> [!NOTE]
+> **Windows Server S2D**
+> On Windows Server S2D (not Azure Local), an infrastructure volume is not always present. A `Warn` status for this check on Windows Server may be expected — use context to determine if action is needed.
+>
 ---
 
 ### 10 — CacheTierHealth
@@ -249,9 +254,10 @@ Checks whether the maximum uncommitted growth of thin-provisioned volumes would 
 
 **Remediation (Warn/Fail):** Add capacity drives to increase pool free space, reduce provisioned volume sizes, or convert high-risk volumes to fixed provisioning. Use `Invoke-S2DCapacityWhatIf` to model how additional drives would affect the reserve margin.
 
-!!! note "Relationship to Check 1 (ReserveAdequacy)"
-    `ReserveAdequacy` compares *current* pool free space against the recommended reserve. `ThinReserveRisk` asks a forward-looking question: if all thin volumes fill up, will the reserve still be intact? Both can be passing today while `ThinReserveRisk` warns about future risk.
-
+> [!NOTE]
+> **Relationship to Check 1 (ReserveAdequacy)**
+> `ReserveAdequacy` compares *current* pool free space against the recommended reserve. `ThinReserveRisk` asks a forward-looking question: if all thin volumes fill up, will the reserve still be intact? Both can be passing today while `ThinReserveRisk` warns about future risk.
+>
 ---
 
 ## Examples
@@ -281,15 +287,16 @@ Get-S2DHealthStatus |
 
 ## Troubleshooting
 
-!!! warning "Check results reflect cached data"
-    `Get-S2DHealthStatus` uses cached collector data when available. If you suspect stale results, clear the cache by disconnecting and reconnecting:
-
-    ```powershell
-    Disconnect-S2DCluster
-    Connect-S2DCluster -ClusterName "c01-prd-bal" -Credential $cred
-    Get-S2DHealthStatus
-    ```
-
+> [!WARNING]
+> **Check results reflect cached data**
+> `Get-S2DHealthStatus` uses cached collector data when available. If you suspect stale results, clear the cache by disconnecting and reconnecting:
+>
+> ```powershell
+> Disconnect-S2DCluster
+> Connect-S2DCluster -ClusterName "c01-prd-bal" -Credential $cred
+> Get-S2DHealthStatus
+> ```
+>
 !!! tip "Running specific checks for monitoring"
     Use `-CheckName` for lightweight monitoring scripts that only need to evaluate a subset of checks. This does not skip prerequisite data collection — all collectors are still run if their data is not cached.
 
