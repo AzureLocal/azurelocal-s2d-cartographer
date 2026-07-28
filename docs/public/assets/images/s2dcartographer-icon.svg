@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A86D8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#003A70;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="mapGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#F7941D;stop-opacity:0.22" />
+      <stop offset="100%" style="stop-color:#0078D4;stop-opacity:0" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#001A3A" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="38" ry="38" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid lines (cartographic map feel) -->
+  <g opacity="0.08" stroke="white" stroke-width="0.8">
+    <line x1="0" y1="50" x2="200" y2="50"/>
+    <line x1="0" y1="100" x2="200" y2="100"/>
+    <line x1="0" y1="150" x2="200" y2="150"/>
+    <line x1="50" y1="0" x2="50" y2="200"/>
+    <line x1="100" y1="0" x2="100" y2="200"/>
+    <line x1="150" y1="0" x2="150" y2="200"/>
+  </g>
+
+  <!-- Diagonal survey lines (cartographic accent) -->
+  <g opacity="0.05" stroke="white" stroke-width="0.8">
+    <line x1="0" y1="0" x2="200" y2="200"/>
+    <line x1="200" y1="0" x2="0" y2="200"/>
+  </g>
+
+  <!-- Cartographer badge (top center) -->
+  <g transform="translate(100,32)" filter="url(#shadow)">
+    <polygon points="0,-14 14,-5 10,12 0,7 -10,12 -14,-5"
+      fill="#F7941D" stroke="#C06910" stroke-width="0.8"/>
+    <text x="0" y="3" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold"
+      font-size="9" fill="white">C</text>
+  </g>
+
+  <!-- Main circular element -->
+  <g filter="url(#shadow)">
+    <!-- Outer ring -->
+    <circle cx="100" cy="100" r="46" fill="white"/>
+
+    <!-- Inner face -->
+    <circle cx="100" cy="100" r="38" fill="url(#bgGrad)"/>
+    <circle cx="100" cy="100" r="38" fill="url(#mapGlow)"/>
+
+    <!-- Topographic contour rings -->
+    <circle cx="100" cy="100" r="30" fill="none" stroke="#F7941D" stroke-width="1.2" opacity="0.30"/>
+    <circle cx="100" cy="100" r="20" fill="none" stroke="#F7941D" stroke-width="1.2" opacity="0.45"/>
+
+    <!-- Coordinate crosshairs inside inner face -->
+    <g stroke="white" stroke-width="0.7" opacity="0.18">
+      <line x1="62" y1="100" x2="138" y2="100"/>
+      <line x1="100" y1="62" x2="100" y2="138"/>
+    </g>
+
+    <!-- S2D cluster topology: 4 outer nodes (diamond) connected to center -->
+    <!-- Node positions: N=(100,76), E=(124,100), S=(100,124), W=(76,100), Center=(100,100) -->
+
+    <!-- Connection lines — diamond edges -->
+    <g stroke="#F7941D" stroke-width="1.6" opacity="0.65">
+      <line x1="100" y1="76" x2="124" y2="100"/>
+      <line x1="124" y1="100" x2="100" y2="124"/>
+      <line x1="100" y1="124" x2="76" y2="100"/>
+      <line x1="76"  y1="100" x2="100" y2="76"/>
+    </g>
+
+    <!-- Connection lines — center to 4 nodes (hub-and-spoke) -->
+    <g stroke="#F7941D" stroke-width="1.2" opacity="0.45">
+      <line x1="100" y1="100" x2="100" y2="76"/>
+      <line x1="100" y1="100" x2="124" y2="100"/>
+      <line x1="100" y1="100" x2="100" y2="124"/>
+      <line x1="100" y1="100" x2="76"  y2="100"/>
+    </g>
+
+    <!-- Outer cluster nodes (N / E / S / W) -->
+    <circle cx="100" cy="76"  r="5.5" fill="#F7941D" stroke="white" stroke-width="1.2"/>
+    <circle cx="124" cy="100" r="5.5" fill="#F7941D" stroke="white" stroke-width="1.2"/>
+    <circle cx="100" cy="124" r="5.5" fill="#F7941D" stroke="white" stroke-width="1.2"/>
+    <circle cx="76"  cy="100" r="5.5" fill="#F7941D" stroke="white" stroke-width="1.2"/>
+
+    <!-- Center survey pin -->
+    <circle cx="100" cy="100" r="5"   fill="white"   stroke="#F7941D" stroke-width="2.2"/>
+    <circle cx="100" cy="100" r="2"   fill="#F7941D"/>
+
+    <!-- Outer ring highlight -->
+    <circle cx="100" cy="100" r="38" fill="none" stroke="white" stroke-width="1.5" opacity="0.2"/>
+  </g>
+
+  <!-- Bottom labels -->
+  <text x="100" y="168" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif"
+    font-weight="bold" font-size="12" fill="white" letter-spacing="1" opacity="0.95">AZURE LOCAL</text>
+  <text x="100" y="186" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif"
+    font-weight="bold" font-size="10" fill="#F7941D" letter-spacing="1.5" opacity="0.95">S2D CARTOGRAPHER</text>
+</svg>

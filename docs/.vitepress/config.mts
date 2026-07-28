@@ -7,21 +7,10 @@ export default defineConfig({
   description: "Governed centrally by HCS Platform Engineering standards",
   themeConfig: {
     logo: '/assets/images/s2dcartographer-icon.svg',
-    nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Architecture', link: '/architecture' },
-      { text: 'Runbooks', link: '/runbooks' }
-    ],
-    sidebar: [
-      {
-        text: 'Overview',
-        items: [
-          { text: 'Introduction', link: '/' }
-        ]
-      }
-    ],
+    nav: [{"link":"/","text":"Home"},{"link":"/getting-started","text":"Getting Started"},{"link":"/connecting","text":"Connecting"},{"items":[{"link":"/collectors","text":"Overview"},{"link":"/collectors/physical-disks","text":"Physical Disks"},{"link":"/collectors/storage-pool","text":"Storage Pool"},{"link":"/collectors/volume-map","text":"Volume Map"},{"link":"/collectors/cache-tier","text":"Cache Tier"},{"link":"/collectors/capacity-waterfall","text":"Capacity Waterfall"},{"link":"/collectors/health-checks","text":"Health Checks"}],"text":"Collectors"},{"items":[{"link":"/reports","text":"Reports"},{"link":"/diagrams","text":"Diagrams"},{"link":"/schema/cluster-snapshot","text":"Cluster Snapshot Schema"},{"link":"/what-if","text":"What-If Modeling"},{"link":"/samples","text":"Sample Reports"}],"text":"Outputs"},{"items":[{"link":"/tib-vs-tb","text":"TiB vs TB"},{"link":"/capacity-math","text":"Capacity Math"},{"link":"/concepts/architecture","text":"Architecture"}],"text":"Concepts"},{"items":[{"link":"/cmdlets/index","text":"Overview"},{"link":"/cmdlets/Invoke-S2DCartographer","text":"Invoke-S2DCartographer"},{"link":"/cmdlets/Invoke-S2DCapacityWhatIf","text":"Invoke-S2DCapacityWhatIf"},{"link":"/cmdlets/Connect-S2DCluster","text":"Connect-S2DCluster"},{"link":"/cmdlets/Disconnect-S2DCluster","text":"Disconnect-S2DCluster"},{"link":"/cmdlets/Get-S2DPhysicalDiskInventory","text":"Get-S2DPhysicalDiskInventory"},{"link":"/cmdlets/Get-S2DStoragePoolInfo","text":"Get-S2DStoragePoolInfo"},{"link":"/cmdlets/Get-S2DVolumeMap","text":"Get-S2DVolumeMap"},{"link":"/cmdlets/Get-S2DCacheTierInfo","text":"Get-S2DCacheTierInfo"},{"link":"/cmdlets/Get-S2DCapacityWaterfall","text":"Get-S2DCapacityWaterfall"},{"link":"/cmdlets/Get-S2DHealthStatus","text":"Get-S2DHealthStatus"},{"link":"/cmdlets/New-S2DReport","text":"New-S2DReport"},{"link":"/cmdlets/New-S2DDiagram","text":"New-S2DDiagram"},{"link":"/cmdlets/ConvertTo-S2DCapacity","text":"ConvertTo-S2DCapacity"}],"text":"Cmdlet Reference"},{"link":"/companion-tools","text":"Companion Tools"},{"items":[{"link":"/project/roadmap","text":"Roadmap"},{"link":"/project/troubleshooting","text":"Troubleshooting"},{"link":"/changelog","text":"Changelog"}],"text":"Project"}],
+    sidebar: [{"link":"/","text":"Home"},{"link":"/getting-started","text":"Getting Started"},{"link":"/connecting","text":"Connecting"},{"text":"Collectors","items":[{"link":"/collectors","text":"Overview"},{"link":"/collectors/physical-disks","text":"Physical Disks"},{"link":"/collectors/storage-pool","text":"Storage Pool"},{"link":"/collectors/volume-map","text":"Volume Map"},{"link":"/collectors/cache-tier","text":"Cache Tier"},{"link":"/collectors/capacity-waterfall","text":"Capacity Waterfall"},{"link":"/collectors/health-checks","text":"Health Checks"}],"collapsed":false},{"text":"Outputs","items":[{"link":"/reports","text":"Reports"},{"link":"/diagrams","text":"Diagrams"},{"link":"/schema/cluster-snapshot","text":"Cluster Snapshot Schema"},{"link":"/what-if","text":"What-If Modeling"},{"link":"/samples","text":"Sample Reports"}],"collapsed":false},{"text":"Concepts","items":[{"link":"/tib-vs-tb","text":"TiB vs TB"},{"link":"/capacity-math","text":"Capacity Math"},{"link":"/concepts/architecture","text":"Architecture"}],"collapsed":false},{"text":"Cmdlet Reference","items":[{"link":"/cmdlets/index","text":"Overview"},{"link":"/cmdlets/Invoke-S2DCartographer","text":"Invoke-S2DCartographer"},{"link":"/cmdlets/Invoke-S2DCapacityWhatIf","text":"Invoke-S2DCapacityWhatIf"},{"link":"/cmdlets/Connect-S2DCluster","text":"Connect-S2DCluster"},{"link":"/cmdlets/Disconnect-S2DCluster","text":"Disconnect-S2DCluster"},{"link":"/cmdlets/Get-S2DPhysicalDiskInventory","text":"Get-S2DPhysicalDiskInventory"},{"link":"/cmdlets/Get-S2DStoragePoolInfo","text":"Get-S2DStoragePoolInfo"},{"link":"/cmdlets/Get-S2DVolumeMap","text":"Get-S2DVolumeMap"},{"link":"/cmdlets/Get-S2DCacheTierInfo","text":"Get-S2DCacheTierInfo"},{"link":"/cmdlets/Get-S2DCapacityWaterfall","text":"Get-S2DCapacityWaterfall"},{"link":"/cmdlets/Get-S2DHealthStatus","text":"Get-S2DHealthStatus"},{"link":"/cmdlets/New-S2DReport","text":"New-S2DReport"},{"link":"/cmdlets/New-S2DDiagram","text":"New-S2DDiagram"},{"link":"/cmdlets/ConvertTo-S2DCapacity","text":"ConvertTo-S2DCapacity"}],"collapsed":false},{"link":"/companion-tools","text":"Companion Tools"},{"text":"Project","items":[{"link":"/project/roadmap","text":"Roadmap"},{"link":"/project/troubleshooting","text":"Troubleshooting"},{"link":"/changelog","text":"Changelog"}],"collapsed":false}],
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/AzureLocal' }
+      { icon: 'github', link: 'https://github.com/AzureLocal/azurelocal-s2d-cartographer' }
     ],
     footer: {
       message: 'Released under the MIT License.',
@@ -29,6 +18,7 @@ export default defineConfig({
     }
   }
 })
+
 
 
 
