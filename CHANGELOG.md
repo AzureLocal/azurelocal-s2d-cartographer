@@ -6,6 +6,21 @@ All notable changes to S2DCartographer will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0](https://github.com/AzureLocal/azurelocal-s2d-cartographer/compare/v1.8.0...v1.9.0) (2026-06-30)
+
+
+### Features
+
+* **health:** graduated scoring + named-calc config + hot-swap (Cartographer 1.10.0) ([194f7fa](https://github.com/AzureLocal/azurelocal-s2d-cartographer/commit/194f7fa94fc4a08abaf2080ab78fd69bcf8f6779))
+* **report:** provisioning-aware 70% + size-to-enter column; reframe N+1/N+2 as compute advisory (Cartographer 1.9.0) ([7c0b8ea](https://github.com/AzureLocal/azurelocal-s2d-cartographer/commit/7c0b8ea9ab24dffa70db6cd32f41afeb94abce11))
+
+
+### Bug Fixes
+
+* **deps:** make ImportExcel an optional runtime dependency (Cartographer 1.10.1) ([9ab71d2](https://github.com/AzureLocal/azurelocal-s2d-cartographer/commit/9ab71d2c11e7931c797ddc7293774a443d419143))
+* **report:** clarify pool provisioning, scope 70% line to thin volumes, drop N+1 compute box (Cartographer 1.9.1) ([8e96692](https://github.com/AzureLocal/azurelocal-s2d-cartographer/commit/8e9669263be3f0d979d9c6f0217b824864863158))
+* **test:** use cross-platform temp path in [#59](https://github.com/AzureLocal/azurelocal-s2d-cartographer/issues/59) config hot-swap tests ([702d5bd](https://github.com/AzureLocal/azurelocal-s2d-cartographer/commit/702d5bdda47053b181281303e044aee5fda785d8))
+
 ## [Unreleased]
 
 ## [1.10.1] — 2026-06-30
