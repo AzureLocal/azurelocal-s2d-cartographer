@@ -1,0 +1,16 @@
+{
+  "description": "Inputs for the Cartographer <-> Surveyor capacity contract test. Mirrors Surveyor src/engine/capacity.ts computeCapacity (decimal TB). Example values only.",
+  "infraVolumeSizeTB": 0.25,
+  "cases": [
+    { "name": "2-node two-way",              "nodes": 2,  "drivesPerNode": 4,  "driveTB": 3.84, "resiliency": "two-way-mirror",   "rackAware": false, "hybrid": false },
+    { "name": "2-node nested two-way",       "nodes": 2,  "drivesPerNode": 4,  "driveTB": 3.84, "resiliency": "nested-two-way",   "rackAware": false, "hybrid": false },
+    { "name": "3-node three-way",            "nodes": 3,  "drivesPerNode": 6,  "driveTB": 7.68, "resiliency": "three-way-mirror", "rackAware": false, "hybrid": false },
+    { "name": "4-node three-way",            "nodes": 4,  "drivesPerNode": 8,  "driveTB": 3.84, "resiliency": "three-way-mirror", "rackAware": false, "hybrid": false },
+    { "name": "16-node three-way (reserve cap)", "nodes": 16, "drivesPerNode": 8, "driveTB": 3.84, "resiliency": "three-way-mirror", "rackAware": false, "hybrid": false },
+    { "name": "8-node dual parity",          "nodes": 8,  "drivesPerNode": 8,  "driveTB": 3.84, "resiliency": "dual-parity",      "rackAware": false, "hybrid": false },
+    { "name": "12-node dual parity hybrid",  "nodes": 12, "drivesPerNode": 12, "driveTB": 8.0,  "resiliency": "dual-parity",      "rackAware": false, "hybrid": true  },
+    { "name": "rack aware 1+1",              "nodes": 2,  "drivesPerNode": 4,  "driveTB": 3.84, "resiliency": "three-way-mirror", "rackAware": true,  "hybrid": false },
+    { "name": "rack aware 2+2",              "nodes": 4,  "drivesPerNode": 8,  "driveTB": 3.84, "resiliency": "three-way-mirror", "rackAware": true,  "hybrid": false },
+    { "name": "rack aware 4+4",              "nodes": 8,  "drivesPerNode": 8,  "driveTB": 3.84, "resiliency": "two-way-mirror",   "rackAware": true,  "hybrid": false }
+  ]
+}

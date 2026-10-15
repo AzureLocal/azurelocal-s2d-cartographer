@@ -139,3 +139,37 @@ Thin-provisioned volumes have a logical size greater than the current pool footp
 The `OvercommitRatio` from `Get-S2DStoragePoolInfo` and the `ThinOvercommit` health check in `Get-S2DHealthStatus` both surface this condition.
 
 See [`Get-S2DCapacityWaterfall`](collectors/capacity-waterfall.md) for the full waterfall API reference.
+
+## Cross-tool contract with Surveyor
+
+S2D Cartographer (scan) and [Surveyor](https://github.com/AzureLocal/azurelocal-surveyor) (plan) must
+produce the same numbers for the same cluster. `tests/maproom/unit/SurveyorContract.Tests.ps1` pins that
+contract using fixtures from `tests/maproom/Fixtures/surveyor-contract-cases.json` (example values only).
+
+| Stage | Both tools |
+|---|---|
+| Raw | drive bytes x drives per node x nodes (no per-drive efficiency haircut) |
+| Pool | raw x 0.99 (about 1 percent pool metadata), or the live pool size when it can be read |
+| Reserve | min(nodes, 4) x largest capacity drive (Learn: plan-volumes, Reserve capacity) |
+| Infrastructure volume | footprint (Cartographer reads it live; Surveyor models size / efficiency) |
+| Available for volumes | pool - reserve - infrastructure footprint |
+| Usable | available x efficiency, i.e. available / data copies |
+
+**What the 0.92 factor was.** An early Surveyor build multiplied every drive by 0.92. That value is
+close to the decimal-to-binary ratio 10^12 / 2^40 = 0.9095, so it stood in for the TB to TiB display
+conversion, not for a real format overhead. Applying it to bytes double counted the unit change. Neither
+tool applies it any more; units are converted once, at display. The test asserts that stage 3 is raw x 0.99.
+
+**Documented differences.** Cartographer takes a copies divisor, Surveyor an efficiency multiplier (they are
+reciprocals). Surveyor's expansion headroom treats dual parity as two copies; the waterfall uses the real
+efficiency from the node-count table. Neither difference changes the waterfall numbers.
+
+### Rack aware, nested and mixed media
+
+* Rack aware clusters use Rack Level Nested Mirror: two-way mirror for 1+1 (two machines), four-way mirror
+  for 2+2 and larger (four machines or more). Three-way mirror, parity and plain nested mirror are not
+  available. `Get-S2DCapacityWaterfall -RackAware` and `Invoke-S2DWaterfallCalculation -RackAware` apply this.
+  Source: Learn, Azure Local rack aware cluster requirements, Supported node configurations.
+* Nested two-way mirror on two machines writes four copies (25 percent efficiency).
+* Clusters with NVMe, SSD and HDD together: reserve one SSD plus one HDD per server, up to four of each
+  (Learn plan-volumes, Reserve capacity). The waterfall detects this from the physical disk inventory.
