@@ -1,4 +1,4 @@
-@{
+﻿@{
     RootModule           = 'S2DCartographer.psm1'
     ModuleVersion        = '1.10.1'
     CompatiblePSEditions = @('Core')

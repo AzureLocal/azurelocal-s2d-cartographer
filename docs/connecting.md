@@ -299,7 +299,7 @@ Connect-S2DCluster -ClusterName clus01.contoso.com `
 
 # Correct
 Connect-S2DCluster -ClusterName clus01.contoso.com `
-    -Credential (New-Object PSCredential("AZRL\ClusterAdmin", $pw))
+    -Credential (New-Object PSCredential("CONTOSO\ClusterAdmin", $pw))
 ```
 
 ---

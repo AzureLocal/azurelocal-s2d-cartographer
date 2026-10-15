@@ -1,4 +1,4 @@
-# S2DCartographer root module loader
+﻿# S2DCartographer root module loader
 
 $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $moduleFolders = @(
