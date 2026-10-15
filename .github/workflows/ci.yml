@@ -1,0 +1,98 @@
+# Pull request and main-branch checks for S2DCartographer. Nothing here touches a cluster or Azure:
+# the Pester suites run on fixtures and mocks only.
+# Actions are pinned to full commit SHAs (the comment names the release).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+
+      - name: Analyze (fails on any Error or Warning not excluded in PSScriptAnalyzerSettings.psd1)
+        shell: pwsh
+        run: |
+          $r = Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r | Format-Table RuleName, Severity, ScriptName, Line -AutoSize | Out-String -Width 200 | Write-Host
+          if (@($r).Count -gt 0) { throw "PSScriptAnalyzer reported $(@($r).Count) finding(s)." }
+
+  links:
+    name: Markdown links and YAML
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Relative Markdown links resolve
+        shell: pwsh
+        run: ./scripts/Test-MarkdownLinks.ps1
+
+      - name: Workflow YAML parses
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 -c "import glob,yaml; [yaml.safe_load(open(f)) for f in glob.glob('.github/workflows/*.yml')]; print('workflow YAML ok')"
+
+  pester:
+    name: Pester (${{ matrix.suite }})
+    runs-on: windows-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [maproom-unit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          # -SkipPublisherCheck: the runner image ships Pester 3.4 signed by Microsoft.
+          Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Run each test container in its own process
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path results | Out-Null
+          $failed = @()
+          foreach ($f in Get-ChildItem tests/maproom/unit -Filter '*.Tests.ps1' | Sort-Object Name) {
+            $xml = Join-Path results "$($f.BaseName).xml"
+            pwsh -NoProfile -File ./scripts/Invoke-PesterContainer.ps1 -Path $f.FullName -ResultPath $xml
+            if ($LASTEXITCODE -ne 0) { $failed += $f.Name }
+          }
+          if ($failed) { throw "Failing containers: $($failed -join ', ')" }
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pester-${{ matrix.suite }}
+          path: results
+          if-no-files-found: ignore
