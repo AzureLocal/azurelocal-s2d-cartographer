@@ -8,6 +8,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- Capacity waterfall is rack aware (`-RackAware`: two-way mirror for 1+1, four-way mirror for 2+2 and larger) and
+  uses the Learn mixed-media reserve (one SSD plus one HDD per server, up to four of each) on NVMe + SSD + HDD clusters.
+- Surveyor contract test with fixtures; `docs/capacity-math.md` records what the 0.92 factor was.
+- Pull request CI (`.github/workflows/ci.yml`): PSScriptAnalyzer with `PSScriptAnalyzerSettings.psd1`, Pester per container, Markdown link check.
+
+### Changed
+
+- Examples, docs and field-test logs use neutral names (contoso.com, clus01) instead of lab names.
+- PSScriptAnalyzer clean: BOM on non-ASCII scripts, no automatic-variable assignments, no unused variables.
+- `.release-please-manifest.json` corrected to 1.10.1.
+
 ## [1.10.1] — 2026-06-30
 
 ### Fixed
@@ -362,7 +375,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ### Fixed
 
-- `Connect-S2DCluster`: short cluster name resolution now checks `TrustedHosts` first and promotes the short name to a matching FQDN entry (e.g. `tplabs-clus01` → `tplabs-clus01.azrl.mgmt`). On workgroup / non-domain-joined hosts, DNS suffix search lists for internal AD domains are usually absent, so the 1.0.5 DNS-only resolver silently fell through to the short name and produced `0x8009030e`. `TrustedHosts` is authoritative on these hosts and already reflects what WinRM will accept.
+- `Connect-S2DCluster`: short cluster name resolution now checks `TrustedHosts` first and promotes the short name to a matching FQDN entry (e.g. `clus01` → `clus01.contoso.com`). On workgroup / non-domain-joined hosts, DNS suffix search lists for internal AD domains are usually absent, so the 1.0.5 DNS-only resolver silently fell through to the short name and produced `0x8009030e`. `TrustedHosts` is authoritative on these hosts and already reflects what WinRM will accept.
 - Resolution order is now: TrustedHosts → DNS (`GetHostEntry`) → short name pass-through → precise remediation error.
 
 ### Changed
@@ -373,7 +386,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and 
 
 ### Fixed
 
-- `Connect-S2DCluster`: when the caller supplies a short cluster name (e.g. `tplabs-clus01` instead of `tplabs-clus01.azrl.mgmt`), the cmdlet now resolves the short name to a FQDN via DNS before opening the CIM session. Workgroup and non-domain-joined hosts typically have `TrustedHosts` configured with FQDNs, so a short-name target would previously fail with `0x8009030e` at `New-CimSession` even with correct credentials. The resolved FQDN is stored in `$Script:S2DSession.ClusterFqdn`.
+- `Connect-S2DCluster`: when the caller supplies a short cluster name (e.g. `clus01` instead of `clus01.contoso.com`), the cmdlet now resolves the short name to a FQDN via DNS before opening the CIM session. Workgroup and non-domain-joined hosts typically have `TrustedHosts` configured with FQDNs, so a short-name target would previously fail with `0x8009030e` at `New-CimSession` even with correct credentials. The resolved FQDN is stored in `$Script:S2DSession.ClusterFqdn`.
 - `Connect-S2DCluster`: `New-CimSession` failures in the `ByName` path are now caught and rethrown with a multi-line remediation message that calls out the four most common causes — TrustedHosts missing the cluster FQDN, wrong credentials, short-name DNS failure, and `-Local` as an alternative — instead of surfacing the raw WinRM exception. The message also reports whether the host is domain-joined, which is the usual trigger.
 
 ## [1.0.4] — 2026-04-12
