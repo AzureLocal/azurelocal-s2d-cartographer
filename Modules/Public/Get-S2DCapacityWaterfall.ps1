@@ -1,4 +1,4 @@
-function Get-S2DCapacityWaterfall {
+﻿function Get-S2DCapacityWaterfall {
     <#
     .SYNOPSIS
         Computes the 7-stage theoretical capacity waterfall from raw physical to final usable capacity.
@@ -11,6 +11,11 @@ function Get-S2DCapacityWaterfall {
 
         Requires an active session established with Connect-S2DCluster.
 
+    .PARAMETER RackAware
+        The cluster is a rack aware cluster (Rack Level Nested Mirror): the resiliency is
+        two-way mirror for 1+1 and four-way mirror for 2+2 and larger, regardless of what
+        the pool settings report.
+
     .EXAMPLE
         Get-S2DCapacityWaterfall
 
@@ -22,7 +27,9 @@ function Get-S2DCapacityWaterfall {
     #>
     [CmdletBinding()]
     [OutputType([S2DCapacityWaterfall])]
-    param()
+    param(
+        [switch] $RackAware
+    )
 
     # ── Gather prerequisite data from cache or live queries ───────────────────
     $physDisks = @($Script:S2DSession.CollectedData['PhysicalDisks'])
@@ -77,6 +84,17 @@ function Get-S2DCapacityWaterfall {
     $poolTotalBytes    = if ($pool -and $pool.TotalSize) { $pool.TotalSize.Bytes } else { [int64]0 }
     $poolFreeBytes     = if ($pool -and $pool.RemainingSize) { $pool.RemainingSize.Bytes } else { [int64]0 }
 
+    # Learn plan-volumes: with NVMe + SSD + HDD, reserve one SSD plus one HDD per server.
+    $largestSsdBytes = [int64]0
+    $largestHddBytes = [int64]0
+    $ssdDisks = @($capacityDisks | Where-Object { $_.PSObject.Properties['MediaType'] -and $_.MediaType -eq 'SSD' })
+    $hddDisks = @($capacityDisks | Where-Object { $_.PSObject.Properties['MediaType'] -and $_.MediaType -eq 'HDD' })
+    $hasNvme  = @($physDisks | Where-Object { $_.PSObject.Properties['MediaType'] -and $_.MediaType -eq 'NVMe' }).Count -gt 0
+    if ($hasNvme -and $ssdDisks.Count -gt 0 -and $hddDisks.Count -gt 0) {
+        $largestSsdBytes = [int64]($ssdDisks | Measure-Object -Property SizeBytes -Maximum).Maximum
+        $largestHddBytes = [int64]($hddDisks | Measure-Object -Property SizeBytes -Maximum).Maximum
+    }
+
     $infraVolumes  = @($volumes | Where-Object IsInfrastructureVolume)
     $infraBytes    = [int64]0
     foreach ($iv in $infraVolumes) {
@@ -95,7 +113,9 @@ function Get-S2DCapacityWaterfall {
         $mirrorSetting = @($pool.ResiliencySettings | Where-Object { $_.Name -eq 'Mirror' }) | Select-Object -First 1
         if ($mirrorSetting -and $mirrorSetting.NumberOfDataCopies -gt 0) {
             $resiliencyFactor    = [double]$mirrorSetting.NumberOfDataCopies
-            $resiliencyName      = "$($mirrorSetting.NumberOfDataCopies)-way mirror"
+            $resiliencyName      = if ($mirrorSetting.NumberOfDataCopies -eq 4 -and $nodeCount -le 2) {
+                'nested two-way mirror (4 copies)'
+            } else { "$($mirrorSetting.NumberOfDataCopies)-way mirror" }
             $resiliencyIsAssumed = $false
         }
     }
@@ -112,6 +132,11 @@ function Get-S2DCapacityWaterfall {
         ResiliencyName       = $resiliencyName
     }
     if ($resiliencyIsAssumed) { $waterfallParams['ResiliencyIsAssumed'] = $true }
+    if ($largestSsdBytes -gt 0) {
+        $waterfallParams['LargestSsdDriveSizeBytes'] = $largestSsdBytes
+        $waterfallParams['LargestHddDriveSizeBytes'] = $largestHddBytes
+    }
+    if ($RackAware) { $waterfallParams['RackAware'] = $true }
     $waterfall = Invoke-S2DWaterfallCalculation @waterfallParams
 
     # Overcommit state is live-cluster context — set it here, not in the pure function

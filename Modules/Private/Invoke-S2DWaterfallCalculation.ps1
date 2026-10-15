@@ -1,4 +1,4 @@
-# Invoke-S2DWaterfallCalculation — pure waterfall math, no session dependency.
+﻿# Invoke-S2DWaterfallCalculation — pure waterfall math, no session dependency.
 # Called by Get-S2DCapacityWaterfall (live cluster) and Invoke-S2DCapacityWhatIf (what-if modeling).
 
 function Invoke-S2DWaterfallCalculation {
@@ -79,8 +79,26 @@ function Invoke-S2DWaterfallCalculation {
         # Callers that have read actual NumberOfDataCopies must pass the real value.
         [double] $ResiliencyFactor      = 2.0,
         [string] $ResiliencyName        = '2-way mirror (assumed)',
-        [switch] $ResiliencyIsAssumed
+        [switch] $ResiliencyIsAssumed,
+        # Mixed NVMe + SSD + HDD clusters: reserve one SSD plus one HDD per server (Learn plan-volumes).
+        [int64]  $LargestSsdDriveSizeBytes = 0,
+        [int64]  $LargestHddDriveSizeBytes = 0,
+        # Rack aware cluster: Rack Level Nested Mirror is mandatory. 1+1 (2 machines) = two-way
+        # mirror, 2+2 and larger (4+ machines) = four-way mirror. Overrides ResiliencyFactor.
+        [switch] $RackAware
     )
+
+    if ($RackAware) {
+        # Learn: azure-local/concepts/rack-aware-cluster-requirements, "Supported node configurations".
+        if ($NodeCount -ge 4) {
+            $ResiliencyFactor = 4.0
+            $ResiliencyName   = 'Rack Level Nested Mirror (four-way mirror)'
+        } else {
+            $ResiliencyFactor = 2.0
+            $ResiliencyName   = 'Rack Level Nested Mirror (two-way mirror, 1+1)'
+        }
+        $ResiliencyIsAssumed = $false
+    }
 
     # ── Stage 1: Raw physical ─────────────────────────────────────────────────
     $stage1Bytes = $RawDiskBytes
@@ -100,7 +118,9 @@ function Invoke-S2DWaterfallCalculation {
     $reserveCalc  = Get-S2DReserveCalculation `
         -NodeCount                    $NodeCount `
         -LargestCapacityDriveSizeBytes $LargestDiskSizeBytes `
-        -PoolFreeBytes                $PoolFreeBytes
+        -PoolFreeBytes                $PoolFreeBytes `
+        -LargestSsdDriveSizeBytes     $LargestSsdDriveSizeBytes `
+        -LargestHddDriveSizeBytes     $LargestHddDriveSizeBytes
     $reserveBytes = $reserveCalc.ReserveRecommendedBytes
     $stage4Bytes  = $stage3Bytes - $reserveBytes
 
@@ -177,7 +197,12 @@ function Invoke-S2DWaterfallCalculation {
     $descS1 = "FOOTPRINT. All pool-member capacity drives. $driveCount x $drvTB TB ($drvTiB TiB) = $s1TB TB / $s1TiB TiB raw."
     $descS2 = "INFORMATIONAL — no deduction. Vendor labels use decimal TB (1 TB = 10^12 bytes); Windows and PowerShell report binary TiB (1 TiB = 2^40 bytes, approx. 1.0995 x 10^12 bytes). This creates an apparent ~9% gap. Vendor label: $vendorLabeledTB TB."
     $descS3 = "FOOTPRINT. ~$ohPct% held by the storage pool for internal metadata. Deduction: $ohDedTB TB / $ohDedTiB TiB. Remaining: $s3TB TB / $s3TiB TiB."
-    $descS4 = "FOOTPRINT. Per Microsoft: one capacity drive per server, up to 4 servers. $resCnt x $drvTB TB = $resTB TB / $resTiB TiB held for rebuild. Remaining: $s4TB TB / $s4TiB TiB."
+    $descS4 = if ($reserveCalc.IsMixedMedia) {
+        "FOOTPRINT. Per Microsoft (NVMe + SSD + HDD): one SSD plus one HDD per server, up to 4 of each. $resCnt x (SSD + HDD) = $resTB TB / $resTiB TiB held for rebuild."
+    } else {
+        "FOOTPRINT. Per Microsoft: one capacity drive per server, up to 4 servers. $resCnt x $drvTB TB = $resTB TB / $resTiB TiB held for rebuild."
+    }
+    $descS4 += " Remaining: $s4TB TB / $s4TiB TiB."
     $descS5 = "FOOTPRINT. Azure Local system volume pool footprint deducted. $infraDisplay. Remaining: $s5TB TB / $s5TiB TiB."
     $descS6 = "FOOTPRINT. Pool footprint space available for workload volumes after all deductions. $s6TB TB / $s6TiB TiB. 70% planning line (alert threshold) = $p70TB TB / $p70TiB TiB of available-for-volumes footprint."
     $descS7 = "DATA (usable). $ResiliencyName writes $copies copies of every byte (footprint / copies = usable data). $s6TB TB / $s6TiB TiB footprint / $copies copies = $s7TB TB / $s7TiB TiB you can actually store.$resiliencyTag"
