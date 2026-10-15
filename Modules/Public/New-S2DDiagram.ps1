@@ -1,4 +1,4 @@
-function New-S2DDiagram {
+﻿function New-S2DDiagram {
     <#
     .SYNOPSIS
         Generates SVG diagrams for capacity waterfall, disk-node map, pool layout, and resiliency.
@@ -26,7 +26,7 @@ function New-S2DDiagram {
         Destination folder for SVG files. Created if it does not exist.
 
     .EXAMPLE
-        Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru | New-S2DDiagram
+        Invoke-S2DCartographer -ClusterName clus01 -PassThru | New-S2DDiagram
 
     .EXAMPLE
         New-S2DDiagram -InputObject $data -DiagramType Waterfall, DiskNodeMap

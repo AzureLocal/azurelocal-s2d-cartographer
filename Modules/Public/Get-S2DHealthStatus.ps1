@@ -1,4 +1,4 @@
-function Get-S2DHealthStatus {
+﻿function Get-S2DHealthStatus {
     <#
     .SYNOPSIS
         Runs all S2D health checks and returns pass/warn/fail results with severity.

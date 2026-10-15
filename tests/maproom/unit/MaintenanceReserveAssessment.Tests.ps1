@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 <#
 .SYNOPSIS
     Unit tests for Get-S2DMaintenanceReserveAssessment (v1.9.0 re-frame).

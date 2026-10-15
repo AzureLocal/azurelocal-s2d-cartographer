@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Generates HTML, Word, and Excel preview reports from the MAPROOM cluster-snapshot.json
     without requiring a live cluster connection.

@@ -1,4 +1,4 @@
-# PostToolUse hook — format-on-write
+﻿# PostToolUse hook — format-on-write
 # Fires on Write|Edit. Extracts the file path and applies a formatter if one is configured.
 #
 # Current behavior:

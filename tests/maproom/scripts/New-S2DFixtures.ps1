@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Generates all 8 S2DCartographer unit-test fixture JSON files in tests/maproom/Fixtures/.
 
@@ -27,12 +27,10 @@ Write-Host "Generating fixtures to: $fixturesDir" -ForegroundColor Cyan
 # ─── Constants ────────────────────────────────────────────────────────────────
 $TiB_DIVISOR     = [int64]1099511627776
 $TB_DIVISOR      = [int64]1000000000000
-$GiB_DIVISOR     = [int64]1073741824
 $INFRA_VOL_BYTES = [int64]268435456000   # 250 GiB  — Azure Local infrastructure volume
 $POOL_OVERHEAD   = 0.005                 # 0.5% pool metadata
 
 # IIC domain constants
-$IIC_DOMAIN   = 'iic.local'
 $IIC_COMPANY  = 'Infinite Improbability Corp'
 $IIC_TENANT   = '00000000-0000-0000-0000-000000000000'
 $IIC_SUB      = '33333333-3333-3333-3333-333333333333'
@@ -104,7 +102,6 @@ function script:MakeWaterfall([int64]$rawBytes, [int]$nodeCount, [int64]$largest
     $poolTotal    = $rawBytes - $overhead
     $reserveRec   = [Math]::Min($nodeCount, 4) * $largestDiskBytes
     $free         = $poolTotal - $allocatedBytes
-    $isReserveOK  = $free -ge $reserveRec
     $reserveStat  = if ($free -ge $reserveRec) { 'Adequate' } elseif ($free -ge ($reserveRec*0.5)) { 'Warning' } else { 'Critical' }
     $available    = $poolTotal - $reserveRec - $INFRA_VOL_BYTES
     $usable       = [long]($available * ($blendedEfficiency / 100.0))
@@ -181,8 +178,6 @@ $disks2na  = foreach ($n in $nodes2) {
     foreach ($d in 1..4) { MakeDisk $n $d 'Capacity' 'NVMe' $diskBytes 'INTEL SSDPE2KX040T8' 'VCV10162' 'Intel' 12 }
 }
 $raw2na    = [int64]($diskBytes * 8)
-$vol2na_fp = [int64]($diskBytes * 8 * 0.8)  # volume footprint occupies ~80% raw (2-way = 40% usable of raw)
-$pool2na   = [long]($raw2na * (1 - $POOL_OVERHEAD)) - $INFRA_VOL_BYTES - [int64]($diskBytes * 2 * 0.5)  # reasonable alloc
 $alloc2na  = [int64]($raw2na * 0.38)          # leaves room for reserve
 $wf2na     = MakeWaterfall $raw2na 2 $diskBytes $alloc2na 50.0
 
@@ -251,7 +246,6 @@ $disks4n = foreach ($n in $nodes4n) {
     foreach ($d in 1..4) { MakeDisk $n $d 'Capacity' 'NVMe' $disk4n 'SAMSUNG PM9A3 7.68TB' 'GXA7602Q' 'Samsung' 15 }
 }
 $raw4n3   = [int64]($disk4n * 16)
-$thin4n_provBytes = [int64]($disk4n * 6)  # thin vol: 6 drive-sizes provisioned...
 $alloc4n3 = [int64]($disk4n * 9)          # pool allocated (thin writes = 3 TB equivalent)
 $wf4n3    = MakeWaterfall $raw4n3 4 $disk4n $alloc4n3 33.3
 $thinAllocBytes = [int64]($disk4n * 2)   # only 2 drives worth actually written

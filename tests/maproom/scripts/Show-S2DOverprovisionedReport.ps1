@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Generates an HTML report for a synthetic *overprovisioned* S2D cluster
     so you can see exactly what S2DCartographer renders when the pool has

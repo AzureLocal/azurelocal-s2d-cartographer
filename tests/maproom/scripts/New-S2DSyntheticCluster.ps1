@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Generates a synthetic S2D cluster fixture using IIC (Infinite Improbability Corp)
     fictional company data for simulation testing.

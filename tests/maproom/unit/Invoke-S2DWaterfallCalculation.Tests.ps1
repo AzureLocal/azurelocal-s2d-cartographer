@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 BeforeAll {
     $psm1 = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\S2DCartographer.psm1')
     Import-Module $psm1 -Force

@@ -1,4 +1,4 @@
-# Resolve-S2DSession — returns the active CimSession or $null for local mode.
+﻿# Resolve-S2DSession — returns the active CimSession or $null for local mode.
 # Used by all collector cmdlets to get the right CIM target.
 
 function Resolve-S2DSession {

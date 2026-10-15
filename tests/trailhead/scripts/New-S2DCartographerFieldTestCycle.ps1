@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Creates a new Operation TRAILHEAD field-testing cycle — milestone + 8 phase issues — in the
     AzureLocal/azurelocal-s2d-cartographer GitHub repository.
@@ -16,7 +16,7 @@
     The module version being tested (e.g. "0.2.0").
 
 .PARAMETER Environment
-    Short human-readable description of the test environment (e.g. "tplabs-clus01 (4-node Dell, TierPoint Labs)").
+    Short human-readable description of the test environment (e.g. "clus01 (4-node example cluster)").
 
 .PARAMETER DueDate
     Optional. ISO 8601 date (YYYY-MM-DD) for the milestone due date. Defaults to 30 days from today.
@@ -25,7 +25,7 @@
     Print what would be created without actually calling the GitHub API.
 
 .EXAMPLE
-    .\New-S2DCartographerFieldTestCycle.ps1 -Version "0.2.0" -Environment "tplabs-clus01 (4-node Dell)"
+    .\New-S2DCartographerFieldTestCycle.ps1 -Version "0.2.0" -Environment "clus01 (4-node Dell)"
 
 .NOTES
     Place this script in tests/trailhead/scripts/.
@@ -49,12 +49,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 function Invoke-Gh {
-    param([string[]]$Args)
+    param([string[]]$GhArgs)
     if ($WhatIf) {
-        Write-Host "[WhatIf] gh $($Args -join ' ')" -ForegroundColor Cyan
+        Write-Host "[WhatIf] gh $($GhArgs -join ' ')" -ForegroundColor Cyan
         return "0"
     }
-    gh @Args
+    gh @GhArgs
     if ($LASTEXITCODE -ne 0) { throw "gh exited with code $LASTEXITCODE" }
 }
 
@@ -311,7 +311,7 @@ Run complete end-to-end scenarios and record outcomes.
 # ---------------------------------------------------------------------------
 # 3. Create issues and assign to milestone
 # ---------------------------------------------------------------------------
-$milestoneNumber = Invoke-Gh @("api", "repos/AzureLocal/azurelocal-s2d-cartographer/milestones",
+$null = Invoke-Gh @("api", "repos/AzureLocal/azurelocal-s2d-cartographer/milestones",
     "--jq", ".[] | select(.title == `"$milestoneTitle`") | .number"
 ) 2>$null
 

@@ -1,4 +1,4 @@
-function Get-S2DCacheTierInfo {
+﻿function Get-S2DCacheTierInfo {
     <#
     .SYNOPSIS
         Analyzes the S2D cache tier configuration, binding ratio, and health.

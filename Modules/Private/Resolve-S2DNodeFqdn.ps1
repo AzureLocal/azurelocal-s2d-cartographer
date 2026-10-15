@@ -1,8 +1,8 @@
-# Resolve-S2DNodeFqdn — derive a fan-out target FQDN for a cluster node short name.
+﻿# Resolve-S2DNodeFqdn — derive a fan-out target FQDN for a cluster node short name.
 #
 # On workgroup/non-domain-joined management machines, CIM/WinRM sessions typically
 # only succeed against fully qualified names listed in TrustedHosts. The cluster's
-# MSCluster_Node enumeration returns short names (e.g. 'tplabs-01-n01'). This helper
+# MSCluster_Node enumeration returns short names (e.g. 'node01'). This helper
 # converts them to FQDNs so per-node fan-out operations actually reach the target.
 #
 # Strategy, in order:

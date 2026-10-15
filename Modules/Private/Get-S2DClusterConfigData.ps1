@@ -1,4 +1,4 @@
-# CIM wrappers for cluster configuration queries — thin shims for Pester mockability
+﻿# CIM wrappers for cluster configuration queries — thin shims for Pester mockability
 
 function Get-S2DResiliencySettingData {
     param([CimSession] $CimSession)

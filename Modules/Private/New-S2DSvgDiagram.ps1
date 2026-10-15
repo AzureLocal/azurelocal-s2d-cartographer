@@ -1,9 +1,9 @@
-# SVG diagram generation engine for S2DCartographer
+﻿# SVG diagram generation engine for S2DCartographer
 
 function New-S2DWaterfallSvg {
     param([S2DCapacityWaterfall]$Waterfall, [string]$PrimaryUnit = 'TiB')
 
-    $w = 900; $h = 520
+    $w = 900
     $barH = 36; $barGap = 10; $leftPad = 220; $rightPad = 20; $topPad = 60; $legendH = 50
 
     $colors = @{
@@ -86,7 +86,6 @@ function New-S2DDiskNodeMapSvg {
             $role   = if ($disk.PSObject.Properties['Role']) { $disk.Role } else { 'Unknown' }
             $isUnhealthy = $disk.HealthStatus -ne 'Healthy'
             $color  = if ($isUnhealthy) { $healthAlert } elseif ($diskColors.ContainsKey($role)) { $diskColors[$role] } else { $diskColors['Unknown'] }
-            $label  = "$($disk.FriendlyName -replace '^.{0,5}', '' | Select-Object -First 1)$($disk.MediaType)"
             $sizeLabel = if ($disk.Size) { $disk.Size.TB.ToString('N2') + 'TB' } else { '' }
             $nodes += "<rect x='$($nx+$padW)' y='$dy' width='$($nodeW - 2*$padW)' height='$diskH' fill='$color' rx='3'/>"
             $nodes += "<text x='$($nx+$padW+6)' y='$($dy+$diskH/2+5)' font-family='Segoe UI,Arial,sans-serif' font-size='10' fill='white'>$($disk.MediaType) $sizeLabel</text>"

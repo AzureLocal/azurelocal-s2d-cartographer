@@ -1,4 +1,4 @@
-# Get-S2DResiliencyEfficiency — returns the usable/footprint efficiency ratio for
+﻿# Get-S2DResiliencyEfficiency — returns the usable/footprint efficiency ratio for
 # each S2D resiliency type. Used by Get-S2DVolumeMap and Get-S2DCapacityWaterfall.
 
 function Get-S2DResiliencyEfficiency {

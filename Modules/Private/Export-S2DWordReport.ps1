@@ -1,4 +1,4 @@
-# Word (.docx) report exporter — generates Open XML without requiring Office
+﻿# Word (.docx) report exporter — generates Open XML without requiring Office
 # Cover page with branded banner, KPI table, color-coded section headers,
 # alternating-row data tables, and health check cards with status colors.
 

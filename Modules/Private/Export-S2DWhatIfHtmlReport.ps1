@@ -1,4 +1,4 @@
-# What-if HTML report — before/after capacity waterfall comparison
+﻿# What-if HTML report — before/after capacity waterfall comparison
 
 function Export-S2DWhatIfHtmlReport {
     param(
@@ -25,7 +25,6 @@ function Export-S2DWhatIfHtmlReport {
     }) -join "`n"
 
     $deltaUsableSign  = if ($Result.DeltaUsableTiB -gt 0) { '+' } elseif ($Result.DeltaUsableTiB -lt 0) { '' } else { '±' }
-    $deltaUsableColor = if ($Result.DeltaUsableTiB -gt 0) { '#107c10' } elseif ($Result.DeltaUsableTiB -lt 0) { '#d13438' } else { '#605e5c' }
 
     $html = @"
 <!DOCTYPE html>

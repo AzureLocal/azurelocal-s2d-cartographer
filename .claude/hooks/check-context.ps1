@@ -1,4 +1,4 @@
-# Context watcher for Claude Code (UserPromptSubmit hook).
+﻿# Context watcher for Claude Code (UserPromptSubmit hook).
 #
 # When the active session's input context exceeds THRESHOLD tokens, injects a
 # system reminder telling Claude to write a memory dump and prompt the user

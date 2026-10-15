@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Helper functions for writing entries to an active TRAILHEAD test run log.
 
@@ -25,15 +25,15 @@
 
 Set-StrictMode -Version Latest
 
-function _TH-Guard {
+function Test-ThGuard {
     if (-not $env:TH_LOG_FILE) {
         throw "No active TRAILHEAD run. Run tests/trailhead/scripts/Start-TrailheadRun.ps1 first."
     }
 }
 
-function _TH-Append {
+function Add-ThLogEntry {
     param([string]$Line, [switch]$GitHubComment)
-    _TH-Guard
+    Test-ThGuard
     Add-Content -Path $env:TH_LOG_FILE -Value $Line
     if ($GitHubComment -and $env:TH_ISSUE_NUMBER) {
         gh issue comment $env:TH_ISSUE_NUMBER --body $Line --repo "AzureLocal/azurelocal-s2d-cartographer" 2>$null | Out-Null
@@ -43,10 +43,10 @@ function _TH-Append {
 function Write-THPhase {
     <#.SYNOPSIS Phase boundary marker — call at the start of each phase.#>
     param([Parameter(Mandatory)][string]$Label)
-    _TH-Guard
+    Test-ThGuard
     $ts   = Get-Date -Format "HH:mm:ss"
     $line = "`n### $Label — started $ts`n"
-    _TH-Append $line -GitHubComment
+    Add-ThLogEntry $line -GitHubComment
     Write-Host "`n▶  $Label" -ForegroundColor Cyan
 }
 
@@ -56,10 +56,10 @@ function Write-THPass {
         [Parameter(Mandatory)][string]$CheckId,
         [Parameter(Mandatory)][string]$Detail
     )
-    _TH-Guard
+    Test-ThGuard
     $ts   = Get-Date -Format "HH:mm:ss"
     $line = "- ``$ts`` ✅ **$CheckId** — $Detail"
-    _TH-Append $line
+    Add-ThLogEntry $line
     Write-Host "  ✅ $CheckId — $Detail" -ForegroundColor Green
 }
 
@@ -69,10 +69,10 @@ function Write-THFail {
         [Parameter(Mandatory)][string]$CheckId,
         [Parameter(Mandatory)][string]$Detail
     )
-    _TH-Guard
+    Test-ThGuard
     $ts   = Get-Date -Format "HH:mm:ss"
     $line = "- ``$ts`` ❌ **$CheckId** — $Detail"
-    _TH-Append $line -GitHubComment
+    Add-ThLogEntry $line -GitHubComment
     Write-Host "  ❌ $CheckId — $Detail" -ForegroundColor Red
 }
 
@@ -82,20 +82,20 @@ function Write-THFix {
         [Parameter(Mandatory)][string]$CheckId,
         [Parameter(Mandatory)][string]$Detail
     )
-    _TH-Guard
+    Test-ThGuard
     $ts   = Get-Date -Format "HH:mm:ss"
     $line = "  - ``$ts`` 🔧 **FIX $CheckId** — $Detail"
-    _TH-Append $line -GitHubComment
+    Add-ThLogEntry $line -GitHubComment
     Write-Host "    🔧 FIX $CheckId — $Detail" -ForegroundColor Yellow
 }
 
 function Write-THNote {
     <#.SYNOPSIS Record a general observation, context note, or next-step annotation.#>
     param([Parameter(Mandatory)][string]$Detail)
-    _TH-Guard
+    Test-ThGuard
     $ts   = Get-Date -Format "HH:mm:ss"
     $line = "- ``$ts`` ℹ️  $Detail"
-    _TH-Append $line
+    Add-ThLogEntry $line
     Write-Host "  ℹ️  $Detail" -ForegroundColor DarkCyan
 }
 
@@ -105,10 +105,10 @@ function Write-THSkip {
         [Parameter(Mandatory)][string]$CheckId,
         [Parameter(Mandatory)][string]$Reason
     )
-    _TH-Guard
+    Test-ThGuard
     $ts   = Get-Date -Format "HH:mm:ss"
     $line = "- ``$ts`` ⏭️  **$CheckId** — SKIPPED: $Reason"
-    _TH-Append $line
+    Add-ThLogEntry $line
     Write-Host "  ⏭️  $CheckId — SKIPPED: $Reason" -ForegroundColor DarkGray
 }
 
@@ -120,7 +120,7 @@ function Close-THRun {
         [int]$Skipped = 0,
         [string]$Notes = ""
     )
-    _TH-Guard
+    Test-ThGuard
     $ts      = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $verdict = if ($Failed -eq 0) { "✅ ALL PASS" } else { "❌ $Failed FAILURE(S)" }
 
@@ -140,7 +140,7 @@ function Close-THRun {
 
 $Notes
 "@
-    _TH-Append $summary -GitHubComment
+    Add-ThLogEntry $summary -GitHubComment
 
     if ($env:TH_ISSUE_NUMBER) {
         if ($Failed -eq 0) {

@@ -1,4 +1,4 @@
-# PreToolUse hook — blocks writes containing secret patterns
+﻿# PreToolUse hook — blocks writes containing secret patterns
 # Event: PreToolUse Write|Edit
 # Input: JSON from stdin { tool_name, tool_input: { file_path, content|new_string } }
 

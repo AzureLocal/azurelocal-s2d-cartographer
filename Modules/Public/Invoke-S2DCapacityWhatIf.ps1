@@ -1,4 +1,4 @@
-function Invoke-S2DCapacityWhatIf {
+﻿function Invoke-S2DCapacityWhatIf {
     <#
     .SYNOPSIS
         Models the capacity impact of adding nodes, adding disks, replacing disks,
@@ -60,6 +60,7 @@ function Invoke-S2DCapacityWhatIf {
     .OUTPUTS
         PSCustomObject (S2DWhatIfResult)
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseProcessBlockForPipelineCommand', '', Justification = 'InputObject accepts one baseline snapshot object; the cmdlet is not a streaming filter.')]
     [CmdletBinding(DefaultParameterSetName = 'Snapshot')]
     param(
         [Parameter(Mandatory, ParameterSetName = 'Snapshot', Position = 0)]

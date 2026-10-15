@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 <#
 .SYNOPSIS
     Asserts that the module manifest validates and imports cleanly without ImportExcel

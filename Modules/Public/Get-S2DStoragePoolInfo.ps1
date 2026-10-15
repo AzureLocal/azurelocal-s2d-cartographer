@@ -1,4 +1,4 @@
-function Get-S2DStoragePoolInfo {
+﻿function Get-S2DStoragePoolInfo {
     <#
     .SYNOPSIS
         Returns S2D storage pool configuration, capacity allocation, and overcommit status.

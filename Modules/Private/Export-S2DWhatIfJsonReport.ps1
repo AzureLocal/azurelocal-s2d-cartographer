@@ -1,4 +1,4 @@
-# What-if JSON output — serializes S2DWhatIfResult to a structured JSON file.
+﻿# What-if JSON output — serializes S2DWhatIfResult to a structured JSON file.
 
 function Export-S2DWhatIfJsonReport {
     param(

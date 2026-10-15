@@ -1,4 +1,4 @@
-function New-S2DReport {
+﻿function New-S2DReport {
     <#
     .SYNOPSIS
         Generates HTML, Word, PDF, Excel, JSON, or CSV reports from S2D cluster data.
@@ -36,11 +36,11 @@ function New-S2DReport {
         has full fidelity.
 
     .EXAMPLE
-        Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru | New-S2DReport -Format Html
+        Invoke-S2DCartographer -ClusterName clus01 -PassThru | New-S2DReport -Format Html
 
     .EXAMPLE
-        $data = Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru
-        New-S2DReport -InputObject $data -Format All -Author "Kris Turner" -Company "TierPoint"
+        $data = Invoke-S2DCartographer -ClusterName clus01 -PassThru
+        New-S2DReport -InputObject $data -Format All -Author "Alex Admin" -Company "Contoso"
 
     .EXAMPLE
         # Get just the structured data for a downstream script

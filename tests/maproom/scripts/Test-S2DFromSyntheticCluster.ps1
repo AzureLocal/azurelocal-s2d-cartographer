@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Manually validates S2DCartographer output rendering against the IIC synthetic cluster fixture.
 

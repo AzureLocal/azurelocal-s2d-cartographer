@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 BeforeAll {
     $psm1 = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\S2DCartographer.psm1')
     Import-Module $psm1 -Force
@@ -100,7 +100,7 @@ Describe 'Get-S2DVolumeMap' {
     }
 
     Context 'Infrastructure volume detection' {
-        It 'flags volumes matching Infrastructure_<guid> name pattern as infrastructure' {
+        It 'flags volumes matching Infrastructure_{guid} name pattern as infrastructure' {
             InModuleScope S2DCartographer {
                 Mock Get-S2DVirtualDiskData {
                     @([PSCustomObject]@{

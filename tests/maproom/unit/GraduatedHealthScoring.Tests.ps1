@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 <#
 .SYNOPSIS
     Tests for graduated health scoring, named config references, and config hot-swap.

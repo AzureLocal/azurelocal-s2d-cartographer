@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 <#
 .SYNOPSIS
     Regression tests for v1.4.0 bug fixes.
@@ -160,7 +160,6 @@ Describe 'v1.4.0 #47/#52 — Capacity waterfall is a purely theoretical 7-stage 
     # Shared inputs: 4-node IIC cluster, 16 × 3.84 TB NVMe
     $raw      = [int64]61440000000000
     $largest  = [int64]3840000000000
-    $poolFree = [int64]40820000000000
 
     Context 'Stage count' {
 

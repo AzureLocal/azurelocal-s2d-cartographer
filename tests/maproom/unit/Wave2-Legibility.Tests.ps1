@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 # Wave 2 legibility tests — AB#4644 (70% planning line) + AB#4645 (TB/TiB + footprint/usable labels)
 BeforeAll {
     $psm1 = Resolve-Path (Join-Path $PSScriptRoot '..\..\..\S2DCartographer.psm1')

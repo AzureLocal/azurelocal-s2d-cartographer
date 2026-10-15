@@ -1,4 +1,4 @@
-# JSON data exporter — writes the full S2DClusterData snapshot as structured
+﻿# JSON data exporter — writes the full S2DClusterData snapshot as structured
 # JSON for downstream consumers (historical diff, what-if calculator, external
 # dashboards, custom scripts).
 #

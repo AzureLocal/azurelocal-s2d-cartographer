@@ -1,4 +1,4 @@
-# Get-S2DMaintenanceReserveAssessment — N+1/N+2 COMPUTE resiliency context note.
+﻿# Get-S2DMaintenanceReserveAssessment — N+1/N+2 COMPUTE resiliency context note.
 #
 # IMPORTANT: No #Requires, Set-StrictMode, or $ErrorActionPreference at file scope.
 # Private helpers are dot-sourced into the module scope during Import-Module.

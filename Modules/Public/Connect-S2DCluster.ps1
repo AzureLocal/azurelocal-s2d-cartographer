@@ -1,4 +1,4 @@
-function Connect-S2DCluster {
+﻿function Connect-S2DCluster {
     <#
     .SYNOPSIS
         Establishes an authenticated session to an S2D-enabled Failover Cluster.
@@ -67,6 +67,7 @@ function Connect-S2DCluster {
     .EXAMPLE
         Connect-S2DCluster -ClusterName "c01-prd-bal" -KeyVaultName "kv-hcs-01" -SecretName "cluster-admin"
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The secret is read from Azure Key Vault at run time (Get-AzKeyVaultSecret) and has to be wrapped into a PSCredential; it is never a literal in source.')]
     [CmdletBinding(DefaultParameterSetName = 'ByName')]
     param(
         [Parameter(ParameterSetName = 'ByName',      Mandatory, Position = 0)]
@@ -120,7 +121,7 @@ function Connect-S2DCluster {
                     ''
                     'Use one of these username formats:'
                     '  DOMAIN\user       (e.g. MGMT\svc.azl.local)'
-                    '  user@fqdn.domain  (e.g. svc.azl.local@azrl.mgmt)'
+                    '  user@fqdn.domain  (e.g. svc.azl.local@contoso.com)'
                     ''
                     'A plain local username will not authenticate against a domain cluster.'
                 ) -join [Environment]::NewLine
@@ -151,12 +152,12 @@ function Connect-S2DCluster {
                     $trustedHostsRaw = (Get-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction SilentlyContinue).Value
                     if ($trustedHostsRaw) {
                         $entries = $trustedHostsRaw -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-                        $matches = $entries | Where-Object { $_ -like "$ClusterName.*" }
-                        if ($matches) {
-                            $clusterTarget = ($matches | Select-Object -First 1)
+                        $hostMatches = $entries | Where-Object { $_ -like "$ClusterName.*" }
+                        if ($hostMatches) {
+                            $clusterTarget = ($hostMatches | Select-Object -First 1)
                             $resolvedVia = 'TrustedHosts'
-                            if (@($matches).Count -gt 1) {
-                                Write-Verbose "Multiple TrustedHosts entries match '$ClusterName.*' — using '$clusterTarget'. Other matches: $((@($matches) | Select-Object -Skip 1) -join ', ')"
+                            if (@($hostMatches).Count -gt 1) {
+                                Write-Verbose "Multiple TrustedHosts entries match '$ClusterName.*' — using '$clusterTarget'. Other matches: $((@($hostMatches) | Select-Object -Skip 1) -join ', ')"
                             }
                         }
                     }

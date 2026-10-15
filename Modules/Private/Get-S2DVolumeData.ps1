@@ -1,4 +1,4 @@
-# CIM wrappers for volume-related queries — thin shims for Pester mockability
+﻿# CIM wrappers for volume-related queries — thin shims for Pester mockability
 
 function Get-S2DVirtualDiskData {
     param([CimSession] $CimSession)

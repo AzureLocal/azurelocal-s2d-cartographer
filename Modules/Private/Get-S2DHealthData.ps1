@@ -1,4 +1,4 @@
-# CIM wrappers for health-related queries — thin shims for Pester mockability
+﻿# CIM wrappers for health-related queries — thin shims for Pester mockability
 
 function Get-S2DHealthFaultData {
     param([CimSession] $CimSession)

@@ -1,4 +1,4 @@
-function Invoke-S2DCartographer {
+﻿function Invoke-S2DCartographer {
     <#
     .SYNOPSIS
         Full orchestrated S2D analysis run: connect, collect, analyze, and report.
@@ -80,11 +80,11 @@ function Invoke-S2DCartographer {
         Return the S2DClusterData object in addition to writing files.
 
     .EXAMPLE
-        Invoke-S2DCartographer -ClusterName tplabs-clus01.azrl.mgmt `
-            -KeyVaultName kv-tplabs-platform -SecretName lcm-deployment-password
+        Invoke-S2DCartographer -ClusterName clus01.contoso.com `
+            -KeyVaultName kv-contoso-platform -SecretName lcm-deployment-password
 
     .EXAMPLE
-        $data = Invoke-S2DCartographer -ClusterName tplabs-clus01 -Format All -IncludeDiagrams -PassThru
+        $data = Invoke-S2DCartographer -ClusterName clus01 -Format All -IncludeDiagrams -PassThru
         $data | New-S2DReport -Format Html
 
     .OUTPUTS

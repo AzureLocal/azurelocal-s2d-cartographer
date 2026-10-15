@@ -1,4 +1,4 @@
-# HTML report exporter — self-contained single-file dashboard with Chart.js
+﻿# HTML report exporter — self-contained single-file dashboard with Chart.js
 
 function Export-S2DHtmlReport {
     param(

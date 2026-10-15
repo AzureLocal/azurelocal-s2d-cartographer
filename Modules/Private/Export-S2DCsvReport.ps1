@@ -1,4 +1,4 @@
-# CSV data exporter — writes flat per-collector CSVs for spreadsheet / Power BI
+﻿# CSV data exporter — writes flat per-collector CSVs for spreadsheet / Power BI
 # consumers who prefer tabular data over nested JSON. Writes multiple files:
 #
 #   <base>-physical-disks.csv

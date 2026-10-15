@@ -1,4 +1,4 @@
-function Get-S2DPhysicalDiskInventory {
+﻿function Get-S2DPhysicalDiskInventory {
     <#
     .SYNOPSIS
         Inventories all physical disks in the S2D cluster with health, capacity, and wear data.
@@ -73,7 +73,7 @@ function Get-S2DPhysicalDiskInventory {
         return $null
     }
 
-    function local:Get-S2DDiskLookupKeys {
+    function local:Get-S2DDiskLookupKey {
         param($Disk)
 
         $keys = @()
@@ -134,7 +134,7 @@ function Get-S2DPhysicalDiskInventory {
 
         try {
             @(if ($cs) { Get-S2DDiskData -CimSession $cs } else { Get-S2DDiskData }) | ForEach-Object {
-                foreach ($key in (Get-S2DDiskLookupKeys $_)) {
+                foreach ($key in (Get-S2DDiskLookupKey $_)) {
                     if (-not $diskLookup.ContainsKey($key)) {
                         $diskLookup[$key] = $_
                     }
@@ -146,7 +146,7 @@ function Get-S2DPhysicalDiskInventory {
         $physDisks | ForEach-Object {
             $disk = $_
             $diskDetail = $null
-            foreach ($key in (Get-S2DDiskLookupKeys $disk)) {
+            foreach ($key in (Get-S2DDiskLookupKey $disk)) {
                 if ($diskLookup.ContainsKey($key)) {
                     $diskDetail = $diskLookup[$key]
                     break
@@ -239,7 +239,7 @@ function Get-S2DPhysicalDiskInventory {
                 return $null
             }
 
-            function Get-S2DDiskLookupKeys {
+            function Get-S2DDiskLookupKey {
                 param($Disk)
 
                 $keys = @()
@@ -263,7 +263,7 @@ function Get-S2DPhysicalDiskInventory {
 
             try {
                 @(Get-Disk -ErrorAction SilentlyContinue) | ForEach-Object {
-                    foreach ($key in (Get-S2DDiskLookupKeys $_)) {
+                    foreach ($key in (Get-S2DDiskLookupKey $_)) {
                         if (-not $diskLookup.ContainsKey($key)) {
                             $diskLookup[$key] = $_
                         }
@@ -275,7 +275,7 @@ function Get-S2DPhysicalDiskInventory {
             $physDisks | ForEach-Object {
                 $disk = $_
                 $diskDetail = $null
-                foreach ($key in (Get-S2DDiskLookupKeys $disk)) {
+                foreach ($key in (Get-S2DDiskLookupKey $disk)) {
                     if ($diskLookup.ContainsKey($key)) {
                         $diskDetail = $diskLookup[$key]
                         break
@@ -409,7 +409,7 @@ function Get-S2DPhysicalDiskInventory {
         }
 
         foreach ($poolDisk in @($poolPhysicalDisks)) {
-            foreach ($key in (Get-S2DDiskLookupKeys $poolDisk)) {
+            foreach ($key in (Get-S2DDiskLookupKey $poolDisk)) {
                 $poolDisks[$key] = $true
             }
         }
@@ -449,7 +449,7 @@ function Get-S2DPhysicalDiskInventory {
         $allDisks = @($allDisks | ForEach-Object {
             $disk = $_
             $isPool = $false
-            foreach ($key in (Get-S2DDiskLookupKeys $disk)) {
+            foreach ($key in (Get-S2DDiskLookupKey $disk)) {
                 if ($poolDisks.ContainsKey($key)) { $isPool = $true; break }
             }
             if (-not $isPool)        { return $disk }  # non-pool: keep every node's copy
@@ -466,7 +466,7 @@ function Get-S2DPhysicalDiskInventory {
     $poolMediaRanks = @(
         $allDisks |
         Where-Object {
-            foreach ($key in (Get-S2DDiskLookupKeys $_)) {
+            foreach ($key in (Get-S2DDiskLookupKey $_)) {
                 if ($poolDisks.ContainsKey($key)) { return $true }
             }
 
@@ -484,7 +484,7 @@ function Get-S2DPhysicalDiskInventory {
         $disk = $_
 
         $inPool = $false
-        foreach ($key in (Get-S2DDiskLookupKeys $disk)) {
+        foreach ($key in (Get-S2DDiskLookupKey $disk)) {
             if ($poolDisks.ContainsKey($key)) {
                 $inPool = $true
                 break

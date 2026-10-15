@@ -15,8 +15,8 @@ Describe 'Resolve-S2DNodeFqdn' {
 
     It 'appends the cluster domain suffix to a short node name' {
         InModuleScope S2DCartographer {
-            Resolve-S2DNodeFqdn -ShortName 'tplabs-01-n01' -ClusterFqdn 'tplabs-clus01.azrl.mgmt' |
-                Should -Be 'tplabs-01-n01.azrl.mgmt'
+            Resolve-S2DNodeFqdn -ShortName 'node01' -ClusterFqdn 'clus01.contoso.com' |
+                Should -Be 'node01.contoso.com'
         }
     }
 
@@ -49,10 +49,10 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
     BeforeEach {
         InModuleScope S2DCartographer {
             $Script:S2DSession = @{
-                ClusterName    = 'clus.azrl.mgmt'
-                ClusterFqdn    = 'clus.azrl.mgmt'
+                ClusterName    = 'clus01.contoso.com'
+                ClusterFqdn    = 'clus01.contoso.com'
                 Nodes          = @('node01', 'node02')
-                NodeTargets    = @{ 'node01' = 'node01.azrl.mgmt'; 'node02' = 'node02.azrl.mgmt' }
+                NodeTargets    = @{ 'node01' = 'node01.contoso.com'; 'node02' = 'node02.contoso.com' }
                 CimSession     = $null
                 PSSession      = $null
                 IsConnected    = $true
@@ -71,7 +71,7 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
         InModuleScope S2DCartographer {
             $Script:_testCapturedNames = @()
 
-            $stubClusterCim = [PSCustomObject]@{ ComputerName = 'clus.azrl.mgmt' }
+            $stubClusterCim = [PSCustomObject]@{ ComputerName = 'clus01.contoso.com' }
             Mock Resolve-S2DSession { $stubClusterCim } -ModuleName S2DCartographer
 
             Mock New-CimSession -ModuleName S2DCartographer -MockWith {
@@ -89,8 +89,8 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
 
             $null = Get-S2DPhysicalDiskInventory
 
-            $Script:_testCapturedNames | Should -Contain 'node01.azrl.mgmt'
-            $Script:_testCapturedNames | Should -Contain 'node02.azrl.mgmt'
+            $Script:_testCapturedNames | Should -Contain 'node01.contoso.com'
+            $Script:_testCapturedNames | Should -Contain 'node02.contoso.com'
             $Script:_testCapturedNames | Should -Not -Contain 'node01'
             $Script:_testCapturedNames | Should -Not -Contain 'node02'
         }
@@ -101,7 +101,7 @@ Describe 'Get-S2DPhysicalDiskInventory fan-out targets' -Skip:(-not $IsWindows) 
             $Script:S2DSession.NodeTargets = @{}
             $Script:_testCapturedNames = @()
 
-            $stubClusterCim = [PSCustomObject]@{ ComputerName = 'clus.azrl.mgmt' }
+            $stubClusterCim = [PSCustomObject]@{ ComputerName = 'clus01.contoso.com' }
             Mock Resolve-S2DSession { $stubClusterCim } -ModuleName S2DCartographer
 
             Mock New-CimSession -ModuleName S2DCartographer -MockWith {

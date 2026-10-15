@@ -1,4 +1,4 @@
-# S2DCapacity class — dual-unit capacity representation used throughout S2DCartographer
+﻿# S2DCapacity class — dual-unit capacity representation used throughout S2DCartographer
 
 class S2DCapacity {
     [int64]  $Bytes

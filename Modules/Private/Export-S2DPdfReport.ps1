@@ -1,4 +1,4 @@
-# PDF report exporter — renders HTML report via headless Chromium/Edge
+﻿# PDF report exporter — renders HTML report via headless Chromium/Edge
 
 function Export-S2DPdfReport {
     param(
@@ -59,7 +59,7 @@ function Export-S2DPdfReport {
     $absHtml = (Resolve-Path $htmlPath).Path
     $absPdf  = $OutputPath
 
-    $args = @(
+    $chromeArgs = @(
         '--headless=new'
         '--disable-gpu'
         '--no-sandbox'
@@ -69,8 +69,8 @@ function Export-S2DPdfReport {
         "`"$absHtml`""
     )
 
-    Write-Verbose "Invoking: $browserExe $($args -join ' ')"
-    $proc = Start-Process -FilePath $browserExe -ArgumentList $args -Wait -PassThru -WindowStyle Hidden
+    Write-Verbose "Invoking: $browserExe $($chromeArgs -join ' ')"
+    $proc = Start-Process -FilePath $browserExe -ArgumentList $chromeArgs -Wait -PassThru -WindowStyle Hidden
 
     if ($proc.ExitCode -ne 0) {
         Write-Warning "Browser exited with code $($proc.ExitCode). PDF may not have been generated."

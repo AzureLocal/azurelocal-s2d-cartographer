@@ -1,4 +1,4 @@
-function ConvertTo-S2DCapacity {
+﻿function ConvertTo-S2DCapacity {
     <#
     .SYNOPSIS
         Converts a storage capacity value to a dual-unit S2DCapacity object.

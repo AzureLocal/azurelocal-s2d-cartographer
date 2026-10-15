@@ -1,4 +1,4 @@
-#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
+﻿#Requires -Modules @{ModuleName='Pester';ModuleVersion='5.0'}
 <#
 .SYNOPSIS
     Pester unit tests for ConvertTo-S2DCapacity.

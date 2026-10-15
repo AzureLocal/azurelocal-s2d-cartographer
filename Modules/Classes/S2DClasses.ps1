@@ -1,4 +1,4 @@
-# S2DCartographer data model classes
+﻿# S2DCartographer data model classes
 # Depends on S2DCapacity (loaded first — Capacity sorts before Classes alphabetically)
 
 class S2DStoragePool {

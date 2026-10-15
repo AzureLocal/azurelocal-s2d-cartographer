@@ -1,4 +1,4 @@
-# Get-S2DExpansionHeadroom — calculates remaining room to expand or create volumes
+﻿# Get-S2DExpansionHeadroom — calculates remaining room to expand or create volumes
 # at 70 / 80 / 90 / 100% fill thresholds against AvailableForVolumes (footprint basis).
 #
 # CANONICAL MATH (docs/capacity-model.md):

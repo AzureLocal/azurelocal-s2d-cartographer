@@ -1,4 +1,4 @@
-# Excel report exporter — uses ImportExcel module
+﻿# Excel report exporter — uses ImportExcel module
 # Professional table styling, conditional formatting on status columns,
 # and a color-coded Summary dashboard tab.
 
@@ -36,7 +36,6 @@ function Export-S2DExcelReport {
 
     # ── Color helpers ─────────────────────────────────────────────────────────
     $clrBlue      = [System.Drawing.Color]::FromArgb(0x00, 0x3A, 0x70)  # header dark blue
-    $clrAccent    = [System.Drawing.Color]::FromArgb(0x00, 0x78, 0xD4)  # accent blue
     $clrWhite     = [System.Drawing.Color]::White
     $clrPass      = [System.Drawing.Color]::FromArgb(0xDF, 0xF6, 0xDD)
     $clrPassFg    = [System.Drawing.Color]::FromArgb(0x10, 0x7C, 0x10)
