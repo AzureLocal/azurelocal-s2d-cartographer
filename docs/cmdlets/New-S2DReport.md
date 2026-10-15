@@ -126,15 +126,15 @@ Include non-pool disks (boot drives, SAN LUNs, OS drives) in the Physical Disk I
 **HTML report from a live run:**
 
 ```powershell
-Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru |
+Invoke-S2DCartographer -ClusterName clus01 -PassThru |
     New-S2DReport -Format Html
 ```
 
 **All formats with author details:**
 
 ```powershell
-$data = Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru
-New-S2DReport -InputObject $data -Format All -Author "Kris Turner" -Company "Hybrid Cloud Solutions"
+$data = Invoke-S2DCartographer -ClusterName clus01 -PassThru
+New-S2DReport -InputObject $data -Format All -Author "Alex Admin" -Company "Contoso"
 ```
 
 **JSON snapshot only:**

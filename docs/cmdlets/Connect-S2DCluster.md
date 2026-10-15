@@ -212,14 +212,14 @@ Connect-S2DCluster -Local
 **Azure Key Vault credentials:**
 
 ```powershell
-Connect-S2DCluster -ClusterName "tplabs-clus01" -KeyVaultName "kv-tplabs-platform" -SecretName "lcm-deployment-password"
+Connect-S2DCluster -ClusterName "clus01" -KeyVaultName "kv-contoso-platform" -SecretName "lcm-deployment-password"
 ```
 
 **Key Vault with explicit username (no ContentType tag):**
 
 ```powershell
-Connect-S2DCluster -ClusterName "tplabs-clus01" `
-    -KeyVaultName "kv-tplabs-platform" `
+Connect-S2DCluster -ClusterName "clus01" `
+    -KeyVaultName "kv-contoso-platform" `
     -SecretName "lcm-deployment-password" `
     -Username "MGMT\svc.azl.local"
 ```

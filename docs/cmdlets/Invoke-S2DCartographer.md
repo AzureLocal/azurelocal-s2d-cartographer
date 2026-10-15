@@ -109,7 +109,7 @@ Invoke-S2DCartographer
 | Required | No (unless connecting by name) |
 | Default | — |
 
-DNS name or FQDN of the Failover Cluster. Examples: `tplabs-clus01` or `tplabs-clus01.azrl.mgmt`. Not required when `-CimSession` or `-Local` is used.
+DNS name or FQDN of the Failover Cluster. Examples: `clus01` or `clus01.contoso.com`. Not required when `-CimSession` or `-Local` is used.
 
 ---
 
@@ -321,15 +321,15 @@ Return the `S2DClusterData` object to the pipeline in addition to writing files.
 **Simplest run — all formats, Key Vault credentials:**
 
 ```powershell
-Invoke-S2DCartographer -ClusterName tplabs-clus01.azrl.mgmt `
-    -KeyVaultName kv-tplabs-platform -SecretName lcm-deployment-password
+Invoke-S2DCartographer -ClusterName clus01.contoso.com `
+    -KeyVaultName kv-contoso-platform -SecretName lcm-deployment-password
 ```
 
 **Explicit username (when Key Vault secret has no ContentType tag):**
 
 ```powershell
-Invoke-S2DCartographer -ClusterName tplabs-clus01.azrl.mgmt `
-    -KeyVaultName kv-tplabs-platform -SecretName lcm-deployment-password `
+Invoke-S2DCartographer -ClusterName clus01.contoso.com `
+    -KeyVaultName kv-contoso-platform -SecretName lcm-deployment-password `
     -Username 'MGMT\svc.azl.local'
 ```
 
@@ -341,7 +341,7 @@ Invoke-S2DCartographer -ClusterName c01-prd-bal `
     -Credential $cred `
     -Format Html, Json `
     -IncludeDiagrams `
-    -Author "Kris Turner" -Company "Hybrid Cloud Solutions"
+    -Author "Alex Admin" -Company "Contoso"
 ```
 
 **Run locally from a cluster node:**
@@ -353,6 +353,6 @@ Invoke-S2DCartographer -Local -OutputDirectory D:\Reports
 **Capture data for further processing:**
 
 ```powershell
-$data = Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru -SkipHealthChecks
+$data = Invoke-S2DCartographer -ClusterName clus01 -PassThru -SkipHealthChecks
 $data | Invoke-S2DCapacityWhatIf -AddNodes 2 -AddDisksPerNode 4 -NewDiskSizeTB 3.84
 ```

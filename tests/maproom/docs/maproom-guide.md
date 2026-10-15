@@ -89,7 +89,7 @@ Loads the synthetic fixture, runs `ConvertTo-S2DCapacity` against known-good val
 
 ## IIC Canonical Data Standard
 
-All Pester tests and synthetic fixtures use the IIC (Infinite Improbability Corp) fictional company data. Never use real environment names (tplabs, Contoso, customer names) in committed test data.
+All Pester tests and synthetic fixtures use the IIC (Infinite Improbability Corp) fictional company data. Never use real environment names (real cluster names, customer names) in committed test data.
 
 IIC reference:
 - Company: Infinite Improbability Corp

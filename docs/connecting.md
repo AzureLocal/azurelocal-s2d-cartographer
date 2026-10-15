@@ -115,12 +115,12 @@ Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*.yourdomain.com" -Force
 
 # Or add specific FQDNs
 $current = (Get-Item WSMan:\localhost\Client\TrustedHosts).Value
-Set-Item WSMan:\localhost\Client\TrustedHosts -Value "$current,tplabs-clus01.azrl.mgmt" -Force
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "$current,clus01.contoso.com" -Force
 ```
 
 > [!TIP]
 > **Use FQDNs in TrustedHosts**
-> S2DCartographer resolves short cluster names to FQDNs via DNS before connecting. If you configure TrustedHosts with short names (`tplabs-clus01`) but the module resolves to an FQDN (`tplabs-clus01.azrl.mgmt`), the WinRM handshake will fail with `0x8009030e`. Always use FQDNs in TrustedHosts.
+> S2DCartographer resolves short cluster names to FQDNs via DNS before connecting. If you configure TrustedHosts with short names (`clus01`) but the module resolves to an FQDN (`clus01.contoso.com`), the WinRM handshake will fail with `0x8009030e`. Always use FQDNs in TrustedHosts.
 >
 > **Resolution order** used by `Connect-S2DCluster`:
 >
@@ -155,7 +155,7 @@ The full connection and per-node fan-out logic is visualized below. Use this dia
 3. **Domain-joined vs workgroup**:
     - Domain-joined → Kerberos via `-Authentication Negotiate`. No TrustedHosts required.
     - Workgroup → NTLM via `-Authentication Negotiate`. `-Credential` is required and the cluster FQDN must be in TrustedHosts.
-4. **Short-name resolution** — if the caller passed a short name (`tplabs-clus01`), `Connect-S2DCluster` resolves it to an FQDN before connecting. Resolution order: TrustedHosts → DNS → short-name pass-through. If this fails you will see `0x8009030e` at `New-CimSession`.
+4. **Short-name resolution** — if the caller passed a short name (`clus01`), `Connect-S2DCluster` resolves it to an FQDN before connecting. Resolution order: TrustedHosts → DNS → short-name pass-through. If this fails you will see `0x8009030e` at `New-CimSession`.
 5. **Cluster connect** — `New-CimSession` opens against the cluster FQDN. On success, `$Script:S2DSession.IsConnected = $true`.
 6. **Node enumeration** — the module queries `MSCluster_Node` via the cluster session to get the list of member nodes. Short names are stored in `$Script:S2DSession.Nodes`; each is resolved to an FQDN and stored in `$Script:S2DSession.NodeTargets`.
 7. **Per-node fan-out** — collectors like `Get-S2DPhysicalDiskInventory` open a **new CIM session per node** against the FQDN target. Each inherits `Authentication` + `Credential` from the module session.
@@ -193,11 +193,11 @@ Use this flow when setting up a new management host:
 2. Configure TrustedHosts **with FQDNs for the cluster and every node** (elevated PowerShell):
 
         Set-Item WSMan:\localhost\Client\TrustedHosts `
-            -Value "tplabs-clus01.azrl.mgmt,azl-n01.azrl.mgmt,azl-n02.azrl.mgmt,azl-n03.azrl.mgmt,azl-n04.azrl.mgmt" `
+            -Value "clus01.contoso.com,azl-n01.contoso.com,azl-n02.contoso.com,azl-n03.contoso.com,azl-n04.contoso.com" `
             -Force
 
         # Or use a wildcard if you trust the entire DNS zone
-        Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*.azrl.mgmt" -Force
+        Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*.contoso.com" -Force
 
 3. Connect with explicit credentials — `Connect-S2DCluster -ClusterName <cluster-fqdn> -Credential (Get-Credential) -Authentication Negotiate`.
 
@@ -247,16 +247,16 @@ The net effect is a confusing "connected but no data" state. Always add every no
 
 ```powershell
 # 1. Confirm you can reach WinRM on the cluster FQDN
-Test-NetConnection -ComputerName tplabs-clus01.azrl.mgmt -Port 5985
+Test-NetConnection -ComputerName clus01.contoso.com -Port 5985
 
 # 2. Confirm DNS resolves the FQDN correctly
-Resolve-DnsName tplabs-clus01.azrl.mgmt
+Resolve-DnsName clus01.contoso.com
 
 # 3. Check TrustedHosts (workgroup hosts only)
 Get-Item WSMan:\localhost\Client\TrustedHosts
 
 # 4. Try raw CIM session first — isolates the module from the failure
-New-CimSession -ComputerName tplabs-clus01.azrl.mgmt `
+New-CimSession -ComputerName clus01.contoso.com `
     -Credential (Get-Credential) -Authentication Negotiate
 ```
 
@@ -264,7 +264,7 @@ New-CimSession -ComputerName tplabs-clus01.azrl.mgmt `
 
 ```powershell
 # 1. Get the list of node FQDNs the module resolved
-Connect-S2DCluster -ClusterName tplabs-clus01.azrl.mgmt -Credential $cred
+Connect-S2DCluster -ClusterName clus01.contoso.com -Credential $cred
 $Script:S2DSession.NodeTargets
 
 # 2. Add every node FQDN to TrustedHosts
@@ -273,7 +273,7 @@ $nodes   = ($Script:S2DSession.NodeTargets.Values -join ',')
 Set-Item WSMan:\localhost\Client\TrustedHosts -Value "$current,$nodes" -Force
 
 # 3. Retry
-Invoke-S2DCartographer -ClusterName tplabs-clus01.azrl.mgmt -Credential $cred
+Invoke-S2DCartographer -ClusterName clus01.contoso.com -Credential $cred
 ```
 
 ### Recipe 3 — "I want to avoid TrustedHosts entirely"
@@ -294,11 +294,11 @@ Cluster credentials **must** be in `DOMAIN\user` or `user@domain.fqdn` form. Pla
 
 ```powershell
 # Wrong — will fail with 0x80070005
-Connect-S2DCluster -ClusterName tplabs-clus01.azrl.mgmt `
+Connect-S2DCluster -ClusterName clus01.contoso.com `
     -Credential (New-Object PSCredential("Administrator", $pw))
 
 # Correct
-Connect-S2DCluster -ClusterName tplabs-clus01.azrl.mgmt `
+Connect-S2DCluster -ClusterName clus01.contoso.com `
     -Credential (New-Object PSCredential("AZRL\ClusterAdmin", $pw))
 ```
 

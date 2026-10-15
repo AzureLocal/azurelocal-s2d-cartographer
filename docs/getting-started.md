@@ -162,7 +162,7 @@ Invoke-S2DCartographer -ClusterName "c01-prd-bal" -Credential (Get-Credential)
 # All formats + all diagrams
 Invoke-S2DCartographer -ClusterName "c01-prd-bal" -Credential $cred `
     -IncludeDiagrams `
-    -Author "Kristopher Turner" -Company "TierPoint" `
+    -Author "Alex Admin" -Company "Contoso" `
     -OutputDirectory "C:\Deliverables\"
 
 # Return the data object for further processing

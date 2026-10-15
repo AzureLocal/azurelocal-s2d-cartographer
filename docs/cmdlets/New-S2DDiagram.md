@@ -89,7 +89,7 @@ Destination folder for SVG files. Created if it does not exist.
 **All diagrams:**
 
 ```powershell
-Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru | New-S2DDiagram
+Invoke-S2DCartographer -ClusterName clus01 -PassThru | New-S2DDiagram
 ```
 
 **Waterfall and disk map only:**

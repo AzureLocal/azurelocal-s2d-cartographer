@@ -59,7 +59,7 @@ Pure PowerShell `.docx` — no Microsoft Office or COM automation required. Uses
 
 ```powershell
 New-S2DReport -InputObject $data -Format Word `
-    -Author "Kristopher Turner" -Company "TierPoint" `
+    -Author "Alex Admin" -Company "Contoso" `
     -OutputDirectory "C:\Deliverables\"
 ```
 
@@ -282,7 +282,7 @@ Invoke-S2DCartographer -ClusterName "c01-prd-bal" -Credential $cred `
 # Word + PDF only — customer deliverable
 Invoke-S2DCartographer -ClusterName "customer-cluster-01" -Credential $cred `
     -Format Word, Pdf `
-    -Author "Kristopher Turner" -Company "Hybrid Cloud Solutions" `
+    -Author "Alex Admin" -Company "Contoso" `
     -OutputDirectory "C:\Deliverables\"
 
 # Key Vault credentials (unattended) — all formats

@@ -63,7 +63,7 @@ Key properties:
 **Basic pool info:**
 
 ```powershell
-Connect-S2DCluster -ClusterName "tplabs-clus01" -Credential $cred
+Connect-S2DCluster -ClusterName "clus01" -Credential $cred
 Get-S2DStoragePoolInfo
 ```
 

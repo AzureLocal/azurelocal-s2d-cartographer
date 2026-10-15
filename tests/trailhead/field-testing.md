@@ -45,7 +45,7 @@ Use the `New-S2DCartographerFieldTestCycle.ps1` script to create a GitHub milest
 cd E:\git\azurelocal-s2d-cartographer
 .\tests\trailhead\scripts\New-S2DCartographerFieldTestCycle.ps1 `
     -Version "0.2.0" `
-    -Environment "tplabs-clus01 (4-node Dell, TierPoint Labs)" `
+    -Environment "clus01 (4-node example cluster)" `
     -DueDate "2026-06-30"
 ```
 
@@ -76,7 +76,7 @@ The execution host must have:
 ## IIC Canonical Data Standard
 
 All **Pester unit and integration tests** use the IIC (Infinite Improbability Corp) fictional company
-as test data. Do not use real environment names (tplabs, Contoso, etc.) in Pester tests.
+as test data. Do not use real environment names (real cluster names, customer names) in Pester tests.
 
 Field testing (TRAILHEAD) uses **real environment data** and is never committed to the repository.
 

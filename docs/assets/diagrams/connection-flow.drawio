@@ -71,7 +71,7 @@
         </mxCell>
 
         <!-- Short name resolution -->
-        <mxCell id="short_name" value="Short name supplied?&#10;(e.g. tplabs-clus01)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF4CE;strokeColor=#DAA520;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="short_name" value="Short name supplied?&#10;(e.g. clus01)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF4CE;strokeColor=#DAA520;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="620" y="620" width="200" height="90" as="geometry" />
         </mxCell>
 

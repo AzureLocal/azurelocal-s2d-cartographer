@@ -487,7 +487,7 @@ Invoke-S2DCartographer -ClusterName "c01-prd-bal" |
 ```powershell
 Invoke-S2DCartographer -ClusterName "c01-prd-bal" |
     New-S2DReport -Format Word -OutputPath "C:\Reports\cluster-storage-report.docx" `
-                  -Author "Kristopher Turner" -Company "Hybrid Cloud Solutions, LLC"
+                  -Author "Alex Admin" -Company "Hybrid Cloud Solutions, LLC"
 ```
 
 ### 8.3 PDF Report (`New-S2DReport -Format Pdf`)
@@ -839,8 +839,8 @@ Invoke-S2DCartographer -ClusterName "customer-cluster-01" `
     -Credential $cred `
     -Format Word, Pdf `
     -OutputDirectory "C:\Deliverables\Acme-Corp\" `
-    -Author "Kristopher Turner" `
-    -Company "TierPoint" `
+    -Author "Alex Admin" `
+    -Company "Contoso" `
     -IncludeDiagrams
 ```
 

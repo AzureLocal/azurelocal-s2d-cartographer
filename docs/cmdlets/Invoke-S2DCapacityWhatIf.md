@@ -230,7 +230,7 @@ Invoke-S2DCapacityWhatIf -BaselineSnapshot C:\snapshots\snap.json -ChangeResilie
 **Pipe from a live run:**
 
 ```powershell
-Invoke-S2DCartographer -ClusterName tplabs-clus01 -PassThru |
+Invoke-S2DCartographer -ClusterName clus01 -PassThru |
     Invoke-S2DCapacityWhatIf -AddNodes 2 -AddDisksPerNode 4 -NewDiskSizeTB 3.84
 ```
 
