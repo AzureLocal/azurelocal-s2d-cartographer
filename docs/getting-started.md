@@ -7,9 +7,11 @@
 | **PowerShell 7.2+** | Required. [Download here](https://github.com/PowerShell/PowerShell) |
 | **Storage / FailoverClusters RSAT** | Required on management machine, or run directly on a cluster node |
 | **WinRM / CIM access** | Required for remote connections. Ports 5985/5986 open to cluster nodes |
-| **ImportExcel** | Installed automatically as a module dependency via PSGallery |
+| **ImportExcel** | Only for `-Format Excel`. It is not a declared module dependency (`RequiredModules` is empty); the Excel exporter tries `Install-Module ImportExcel -Scope CurrentUser` on first use, so the machine needs PSGallery access or the module installed beforehand |
 | **Microsoft Edge or Chrome** | Required for PDF output (headless print). Pre-installed on most Windows machines |
-| **Az.KeyVault** | Optional — only needed for Key Vault credential retrieval |
+| **Az.KeyVault** | Optional. Needed only for Key Vault credential retrieval (`Get-AzKeyVaultSecret`): an authenticated Az session (for example a managed identity) with permission to read the secret (Key Vault Secrets User role or an access policy) |
+| **Cluster account** | A credential that can open a CIM session over WinRM to every node and read cluster, storage pool and disk data, normally a local Administrator on the nodes. Not needed with `-Local` on a cluster node |
+| **Operating system** | Windows only (management machine or cluster node). RSAT is not needed on cluster nodes. No Azure subscription is needed unless Key Vault is used; no other outbound network access is required |
 
 ## Installation
 

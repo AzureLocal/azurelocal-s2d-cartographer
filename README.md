@@ -58,7 +58,19 @@ Storage Spaces Direct is one of the most misunderstood technologies in the Azure
 Install-Module S2DCartographer -Scope CurrentUser
 ```
 
-**Requirements:** PowerShell 7.2+, Windows (RSAT not required on cluster nodes).
+## Prerequisites
+
+| Area | Requirement |
+|---|---|
+| PowerShell | 7.2 or later (`PowerShellVersion = 7.2`, `CompatiblePSEditions = Core`) |
+| OS | Windows management machine, or run directly on a cluster node (`-Local`). Storage and FailoverClusters cmdlets are needed on the machine that runs the collectors |
+| Remoting | CIM over WinRM to every node: TCP 5985 (HTTP) or 5986 (HTTPS). Workgroup machines must list the cluster and every node FQDN in TrustedHosts (the module never edits it) |
+| Account | Local Administrator or equivalent on the nodes, supplied with `-Credential` or from Azure Key Vault |
+| Modules | No required modules (`RequiredModules` is empty). Optional: `ImportExcel` for `-Format Excel` (auto-install from PSGallery on first use), `Az.KeyVault` for Key Vault credentials (Key Vault Secrets User role) |
+| PDF output | Microsoft Edge or Google Chrome installed (headless print) |
+| Azure | Not required unless Key Vault is used |
+
+Full details: [Getting Started](docs/getting-started.md) and [Connecting](docs/connecting.md).
 
 ---
 
