@@ -58,6 +58,19 @@ Invoke-S2DCapacityWhatIf
     [-PassThru]
 ```
 
+**From a live cluster, named by the environment file:**
+
+```powershell
+Invoke-S2DCapacityWhatIf
+    -InfrastructureFile <string>
+    [-ClusterName <string>]
+    [-AddNodes <int>]
+    [-AddDisksPerNode <int>]
+    [-OutputDirectory <string>]
+    [-Format <string[]>]
+    [-PassThru]
+```
+
 ---
 
 ## Parameters
@@ -85,6 +98,18 @@ Path to a JSON snapshot file produced by S2DCartographer (`SchemaVersion 1.0`). 
 | Default | — |
 
 An `S2DClusterData` object piped from `Invoke-S2DCartographer -PassThru`.
+
+---
+
+### `-InfrastructureFile`
+
+| | |
+|---|---|
+| Type | `string` |
+| Required | Yes (LiveInfrastructure parameter set) |
+| Default | — |
+
+Like `-ClusterName`, but the cluster and its credential come from the environment's `infrastructure.yml` (azurelocal-toolkit, schema 5): `cluster.name`, and the Key Vault secret of the LCM user (`identity.active_directory.lcm_user.password` as a `keyvault://<vault>/<secret>` reference). `-ClusterName` overrides the name from the file. See [Connect-S2DCluster](Connect-S2DCluster.md#-infrastructurefile). Needs `powershell-yaml`.
 
 ---
 

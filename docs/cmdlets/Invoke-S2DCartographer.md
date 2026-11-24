@@ -65,6 +65,18 @@ Invoke-S2DCartographer
     [-PassThru]
 ```
 
+**From the environment file (`infrastructure.yml`):**
+
+```powershell
+Invoke-S2DCartographer
+    -InfrastructureFile <string>
+    [-ClusterName <string>]
+    [-Credential <PSCredential>]
+    [-OutputDirectory <string>]
+    [-Format <string[]>]
+    [-PassThru]
+```
+
 **By existing CimSession:**
 
 ```powershell
@@ -100,6 +112,18 @@ Invoke-S2DCartographer
 ---
 
 ## Parameters
+
+### `-InfrastructureFile`
+
+| | |
+|---|---|
+| Type | `string` |
+| Required | No |
+| Default | — |
+
+Path to the environment's `infrastructure.yml` (azurelocal-toolkit, schema 5). Supplies `-ClusterName` from `cluster.name` and, when no `-Credential` is given, `-KeyVaultName`, `-SecretName` and `-Username` from the LCM user (`identity.active_directory.lcm_user`; `identity.local_admin` without Active Directory) when its password is a `keyvault://<vault>/<secret>` reference. Parameters you pass explicitly win. Needs `powershell-yaml`. Ignored with `-Local` or `-CimSession`.
+
+---
 
 ### `-ClusterName`
 

@@ -83,6 +83,9 @@ Full details: [Getting Started](docs/getting-started.md) and [Connecting](docs/c
 Invoke-S2DCartographer -ClusterName "c01-prd-bal" -Credential (Get-Credential) `
     -Format Html -OutputDirectory "C:\Reports\"
 
+# Or take the cluster and the Key Vault secret from the environment's infrastructure.yml (schema 5)
+Invoke-S2DCartographer -InfrastructureFile .\infrastructure.yml -Format Html -OutputDirectory "C:\Reports\"
+
 # Or use individual collectors
 Connect-S2DCluster -ClusterName "c01-prd-bal" -Credential (Get-Credential)
 Get-S2DHealthStatus          | Format-Table CheckName, Severity, Status
@@ -91,6 +94,22 @@ Disconnect-S2DCluster
 ```
 
 ---
+
+## Where S2D Cartographer fits in the Azure Local tool chain
+
+Cartographer is a **day 2** tool: it reads a deployed cluster and checks what was actually built against what was planned. It is read-only, and it never writes to `infrastructure.yml`.
+
+```text
+Surveyor (sizing handoff) -> Trailwright (infrastructure.yml) -> hardware discovery -> ZTP -> toolkit OS configuration, gate, ARM deploy -> Cartographer / Ranger / Sonar
+```
+
+| Direction | What | Name |
+|---|---|---|
+| In (plan) | The capacity the cluster was sized for | [Surveyor](https://azurelocal.cloud/azurelocal-surveyor/) exports the sizing handoff (`azure-local-sizing-handoff-*.json`); the numbers Cartographer reports use the same capacity model (`tests/maproom/unit/SurveyorContract.Tests.ps1` pins it) |
+| In (cluster) | The environment file | `infrastructure.yml` (schema 5), `-InfrastructureFile` on `Connect-S2DCluster`, `Invoke-S2DCartographer` and `Invoke-S2DCapacityWhatIf`: `cluster.name`, and the `keyvault://<vault>/<secret>` password of `identity.active_directory.lcm_user` (else `identity.local_admin`). Parameters you pass win |
+| Out | Reports and diagrams | HTML, Word, PDF and Excel under `<OutputDirectory>\<ClusterName>\<yyyyMMdd-HHmm>\`, SVG diagrams |
+
+Run it after the deployment and after any change to the disks, nodes or volumes. [Ranger](https://github.com/AzureLocal/azurelocal-ranger) compares the whole cluster with the design; Cartographer goes deeper into capacity.
 
 ## Commands
 

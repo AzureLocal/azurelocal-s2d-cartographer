@@ -10,13 +10,14 @@ Creates and stores a module-scoped session used by all other S2DCartographer cmd
 
 The cmdlet validates that the target has S2D enabled via `Get-ClusterS2D` before storing the session.
 
-Supports five connection methods:
+Supports six connection methods:
 
 1. **ClusterName + Credential** — WinRM/CIM to a cluster node
 2. **CimSession** — re-use an existing CimSession
 3. **PSSession** — re-use an existing PSSession
 4. **Local** — run directly on a cluster node (no remoting)
 5. **ClusterName + KeyVaultName** — retrieve credentials from Azure Key Vault
+6. **InfrastructureFile** — take the cluster name and the Key Vault secret from the environment's `infrastructure.yml` (azurelocal-toolkit, schema 5): `cluster.name` and the `keyvault://<vault>/<secret>` reference of `identity.active_directory.lcm_user.password` (for a design without Active Directory, `identity.local_admin.password`). Every parameter you pass explicitly wins over the file. Needs `powershell-yaml`
 
 ---
 
@@ -38,6 +39,19 @@ Connect-S2DCluster
     [-ClusterName] <string>
     -KeyVaultName <string>
     -SecretName <string>
+    [-Username <string>]
+```
+
+**By the environment file:**
+
+```powershell
+Connect-S2DCluster
+    -InfrastructureFile <string>
+    [-ClusterName <string>]
+    [-Credential <PSCredential>]
+    [-Authentication <string>]
+    [-KeyVaultName <string>]
+    [-SecretName <string>]
     [-Username <string>]
 ```
 
@@ -101,6 +115,18 @@ PSCredential for cluster authentication. Prompted interactively if not supplied.
 | Valid values | `Default`, `Digest`, `Negotiate`, `Basic`, `Kerberos`, `ClientCertificate`, `CredSsp` |
 
 Authentication method passed to `New-CimSession`. `Negotiate` auto-selects NTLM or Kerberos and works in both domain-joined and workgroup/lab environments. Use `Kerberos` to enforce Kerberos explicitly.
+
+---
+
+### `-InfrastructureFile`
+
+| | |
+|---|---|
+| Type | `string` |
+| Required | Yes (ByInfrastructure parameter set) |
+| Default | — |
+
+Path to the environment's `infrastructure.yml` (azurelocal-toolkit, schema 5; `_metadata.schema_version` must start with `5`). Supplies `ClusterName` from `cluster.name` (the FQDN when the file has `identity.active_directory.domain_fqdn`), and, when the account password is a `keyvault://<vault>/<secret>` reference, `KeyVaultName`, `SecretName` and `Username` (the LCM user, else the local administrator). Parameters you pass yourself win over the file. Needs `powershell-yaml`.
 
 ---
 

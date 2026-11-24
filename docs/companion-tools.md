@@ -6,7 +6,7 @@ S2DCartographer is part of a broader set of Azure Local tooling. These tools are
 
 ## Azure Local Surveyor
 
-**[Azure Local Surveyor](https://azurelocal.github.io/azurelocal-surveyor)** is a pre-deployment capacity and workload modeling tool. Use it before you build the cluster to validate hardware sizing, model resiliency scenarios, and plan workload placement.
+**[Azure Local Surveyor](https://azurelocal.cloud/azurelocal-surveyor/)** is a pre-deployment capacity and workload modeling tool. Use it before you build the cluster to validate hardware sizing, model resiliency scenarios, and plan workload placement.
 
 | | Surveyor | S2DCartographer |
 |---|---|---|

@@ -179,6 +179,15 @@ WinRM negotiates authentication based on the target hostname. A short name that 
 
 Use this flow when setting up a new management host:
 
+### From the environment file (`infrastructure.yml`)
+
+```powershell
+Connect-S2DCluster -InfrastructureFile .\infrastructure.yml
+Invoke-S2DCartographer -InfrastructureFile .\infrastructure.yml -Format Html -OutputDirectory C:\Reports\
+```
+
+The file is the one every Azure Local tool reads; the cluster name and, when the LCM user's password is a `keyvault://` reference, the Key Vault secret come from it. Cartographer only reads it.
+
 ### Domain-joined management host (most common)
 
 1. Join the host to the same AD forest as the cluster (or a forest with a trust).
@@ -315,6 +324,7 @@ Connect-S2DCluster -ClusterName clus01.contoso.com `
 | `-Local` | `switch` | Connect to the local machine (no credentials). |
 | `-KeyVaultName` | `string` | Azure Key Vault name for unattended credential retrieval. |
 | `-SecretName` | `string` | Key Vault secret containing the cluster admin password. |
+| `-InfrastructureFile` | `string` | The environment's `infrastructure.yml` (schema 5): supplies the cluster name and the Key Vault secret. Parameters you pass win. Needs `powershell-yaml`. |
 
 ---
 
