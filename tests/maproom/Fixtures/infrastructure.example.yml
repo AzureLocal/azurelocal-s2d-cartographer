@@ -1,0 +1,16 @@
+# The s2d_cartographer cut of an infrastructure.yml (azurelocal-toolkit, schema 5): only the keys S2D Cartographer reads.
+# Placeholder values of the Infinite Improbability Corp example (improbability.cloud); nothing here is a real environment.
+_metadata:
+  schema_version: "5.6.30"
+  scope: s2d_cartographer
+
+cluster:
+  name: "iic-azl-01"
+
+identity:
+  active_directory:
+    domain_fqdn: "improbability.cloud"
+    netbios_name: "IIC"
+    lcm_user:
+      username: "lcm-iic-azl-01"
+      password: "keyvault://kv-iic-mgmt-01/lcm-password"

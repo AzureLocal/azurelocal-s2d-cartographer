@@ -22,6 +22,12 @@
         Connect to a live cluster, collect data, then immediately model. Re-running
         with different scenario parameters will not re-hit the cluster.
 
+    .PARAMETER InfrastructureFile
+        Like -ClusterName, but the cluster and its credential come from the environment's infrastructure.yml
+        (azurelocal-toolkit, schema 5): cluster.name, and the Key Vault secret of the LCM user
+        (identity.active_directory.lcm_user.password as a keyvault://<vault>/<secret> reference). -ClusterName overrides
+        the name from the file. See Connect-S2DCluster -InfrastructureFile. Needs powershell-yaml.
+
     .PARAMETER AddNodes
         Number of nodes to add. New nodes are assumed to have the same disk
         configuration as the average existing node (disk count × disk size).
@@ -70,7 +76,11 @@
         [object] $InputObject,
 
         [Parameter(Mandatory, ParameterSetName = 'Live')]
+        [Parameter(ParameterSetName = 'LiveInfrastructure')]
         [string] $ClusterName,
+
+        [Parameter(Mandatory, ParameterSetName = 'LiveInfrastructure')]
+        [string] $InfrastructureFile,
 
         [int]    $AddNodes          = 0,
         [int]    $AddDisksPerNode   = 0,
@@ -96,8 +106,15 @@
             $raw
         }
         'Object' { $InputObject }
-        'Live' {
-            Connect-S2DCluster -ClusterName $ClusterName
+        { $_ -in 'Live', 'LiveInfrastructure' } {
+            if ($PSCmdlet.ParameterSetName -eq 'LiveInfrastructure') {
+                $connect = @{ InfrastructureFile = $InfrastructureFile }
+                if ($PSBoundParameters.ContainsKey('ClusterName')) { $connect['ClusterName'] = $ClusterName }
+                Connect-S2DCluster @connect | Out-Null
+            }
+            else {
+                Connect-S2DCluster -ClusterName $ClusterName | Out-Null
+            }
             Get-S2DPhysicalDiskInventory | Out-Null
             Get-S2DStoragePoolInfo       | Out-Null
             Get-S2DVolumeMap             | Out-Null

@@ -42,6 +42,13 @@
     .PARAMETER SecretName
         Key Vault secret name containing the cluster password.
 
+    .PARAMETER InfrastructureFile
+        Path to the environment's infrastructure.yml (azurelocal-toolkit, schema 5). Supplies -ClusterName from
+        cluster.name and, when no -Credential is given, -KeyVaultName, -SecretName and -Username from the LCM user
+        (identity.active_directory.lcm_user; identity.local_admin without Active Directory) when its password is a
+        keyvault://<vault>/<secret> reference. Parameters you pass explicitly win. Needs powershell-yaml. Ignored with
+        -Local or -CimSession.
+
     .PARAMETER Username
         Optional explicit username for the Key Vault credential path. When not provided,
         the username is read from the secret's ContentType tag (convention: 'domain\user').
@@ -118,6 +125,9 @@
         [string] $Username,
 
         [Parameter()]
+        [string] $InfrastructureFile,
+
+        [Parameter()]
         [string] $OutputDirectory = 'C:\S2DCartographer',
 
         [Parameter()]
@@ -192,6 +202,19 @@
         # "Credentials are required" error. See issue #39.
         if (-not $Script:S2DSession.IsConnected) {
             $connectParams = @{}
+
+            # -InfrastructureFile supplies what was not passed: the cluster name and, with no -Credential, the Key Vault
+            # secret of the account that reads the cluster. Explicit parameters win.
+            if ($InfrastructureFile -and -not $Local -and -not $CimSession) {
+                $facts = Resolve-S2DInfrastructure -InfrastructureFile $InfrastructureFile
+                if (-not $ClusterName) { $ClusterName = $facts.ClusterName }
+                if (-not $Credential) {
+                    if (-not $KeyVaultName) { $KeyVaultName = $facts.KeyVaultName }
+                    if (-not $SecretName)   { $SecretName   = $facts.SecretName }
+                    if (-not $Username)     { $Username     = $facts.Username }
+                }
+                Write-Log "Infrastructure file $($facts.Source): cluster '$ClusterName'."
+            }
 
             if ($Local) {
                 $connectParams['Local'] = $Local

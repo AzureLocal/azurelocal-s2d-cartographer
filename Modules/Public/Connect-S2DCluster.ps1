@@ -14,6 +14,8 @@
           3. PSSession                      — re-use an existing PSSession
           4. Local                          — run directly on a cluster node (no remoting)
           5. ClusterName + KeyVaultName     — retrieve credentials from Azure Key Vault
+          6. InfrastructureFile             — take the cluster name and the Key Vault secret from the environment's
+                                              infrastructure.yml (cluster.name, identity.active_directory.lcm_user)
 
         The cmdlet validates that the target has S2D enabled via Get-ClusterS2D before
         storing the session.
@@ -44,6 +46,12 @@
     .PARAMETER SecretName
         Name of the Key Vault secret containing the password (username encoded as secret tags or prefixed by convention).
 
+    .PARAMETER InfrastructureFile
+        Path to the environment's infrastructure.yml (azurelocal-toolkit, schema 5). Supplies ClusterName from
+        cluster.name and, when the LCM user's password (identity.active_directory.lcm_user.password; for a design without
+        Active Directory identity.local_admin.password) is a keyvault://<vault>/<secret> reference, KeyVaultName,
+        SecretName and Username. Every parameter you pass explicitly wins over the file. Needs powershell-yaml.
+
     .PARAMETER Username
         Optional explicit username to pair with the Key Vault secret's password. When not provided,
         the module reads the username from the secret's ContentType tag (convention: 'domain\user').
@@ -66,20 +74,30 @@
 
     .EXAMPLE
         Connect-S2DCluster -ClusterName "c01-prd-bal" -KeyVaultName "kv-hcs-01" -SecretName "cluster-admin"
+
+    .EXAMPLE
+        # The cluster and the credential come from the environment's infrastructure.yml
+        Connect-S2DCluster -InfrastructureFile .\infrastructure.yml
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Justification = 'The secret is read from Azure Key Vault at run time (Get-AzKeyVaultSecret) and has to be wrapped into a PSCredential; it is never a literal in source.')]
     [CmdletBinding(DefaultParameterSetName = 'ByName')]
     param(
         [Parameter(ParameterSetName = 'ByName',      Mandatory, Position = 0)]
         [Parameter(ParameterSetName = 'ByKeyVault',  Mandatory, Position = 0)]
+        [Parameter(ParameterSetName = 'ByInfrastructure')]
         [string] $ClusterName,
 
         [Parameter(ParameterSetName = 'ByName')]
+        [Parameter(ParameterSetName = 'ByInfrastructure')]
         [PSCredential] $Credential,
 
         [Parameter(ParameterSetName = 'ByName')]
+        [Parameter(ParameterSetName = 'ByInfrastructure')]
         [ValidateSet('Default','Digest','Negotiate','Basic','Kerberos','ClientCertificate','CredSsp')]
         [string] $Authentication = 'Negotiate',
+
+        [Parameter(ParameterSetName = 'ByInfrastructure', Mandatory)]
+        [string] $InfrastructureFile,
 
         [Parameter(ParameterSetName = 'ByCimSession', Mandatory)]
         [CimSession] $CimSession,
@@ -91,12 +109,15 @@
         [switch] $Local,
 
         [Parameter(ParameterSetName = 'ByKeyVault', Mandatory)]
+        [Parameter(ParameterSetName = 'ByInfrastructure')]
         [string] $KeyVaultName,
 
         [Parameter(ParameterSetName = 'ByKeyVault', Mandatory)]
+        [Parameter(ParameterSetName = 'ByInfrastructure')]
         [string] $SecretName,
 
         [Parameter(ParameterSetName = 'ByKeyVault')]
+        [Parameter(ParameterSetName = 'ByInfrastructure')]
         [string] $Username
     )
 
@@ -106,7 +127,20 @@
         return
     }
 
-    switch ($PSCmdlet.ParameterSetName) {
+    # -InfrastructureFile fills what the caller did not pass: the cluster name, and the Key Vault secret of the account that
+    # reads the cluster. An explicit parameter wins. The connection then goes the way the resolved parameters say.
+    $connectionMethod = $PSCmdlet.ParameterSetName
+    if ($connectionMethod -eq 'ByInfrastructure') {
+        $facts = Resolve-S2DInfrastructure -InfrastructureFile $InfrastructureFile
+        if (-not $PSBoundParameters.ContainsKey('ClusterName'))  { $ClusterName  = $facts.ClusterName }
+        if (-not $PSBoundParameters.ContainsKey('KeyVaultName')) { $KeyVaultName = $facts.KeyVaultName }
+        if (-not $PSBoundParameters.ContainsKey('SecretName'))   { $SecretName   = $facts.SecretName }
+        if (-not $PSBoundParameters.ContainsKey('Username'))     { $Username     = $facts.Username }
+        $connectionMethod = if (-not $Credential -and $KeyVaultName -and $SecretName) { 'ByKeyVault' } else { 'ByName' }
+        Write-Verbose "Infrastructure file $($facts.Source): cluster '$ClusterName', connecting by $connectionMethod."
+    }
+
+    switch ($connectionMethod) {
 
         'ByName' {
             # Remote CIM/WinRM without explicit credentials almost always fails on
@@ -403,6 +437,6 @@
         ClusterName = $Script:S2DSession.ClusterName
         Nodes       = $Script:S2DSession.Nodes
         Connected   = $true
-        Method      = $PSCmdlet.ParameterSetName
+        Method      = $connectionMethod
     }
 }
